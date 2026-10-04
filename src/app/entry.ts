@@ -18,8 +18,27 @@ const require = createRequire(import.meta.url);
 const { app, BrowserWindow, WebContentsView, Menu, dialog, screen, nativeTheme, ipcMain: ipcMainForProfile } = require('electron');
 
 // ========== 持久化会话配置 ==========
-const SESSION_DIR = process.env.CUCKOO_SESSION_DIR || 'cuckoo-rework-session';
-const USER_DATA_DIR = path.join(app.getPath('appData'), SESSION_DIR);
+// 便携设计：运行时数据默认放在 **exe 同级的 Cuckoo-Data/** 下，
+// 这样免安装版解压到哪，数据就跟到哪（可分享，不写死绝对路径）。
+// 可用 CUCKOO_DATA_ROOT 覆盖整个数据根（如本机想与另一实例隔离）。
+//
+// 注意：若 exe 位于不可写目录（如 Program Files），回退到 %APPDATA%。
+const PORTABLE_DATA_ROOT = process.env.CUCKOO_DATA_ROOT
+  || path.join(path.dirname(process.execPath), 'Cuckoo-Data');
+const USER_DATA_DIR = (() => {
+  const override = process.env.CUCKOO_SESSION_DIR;
+  if (override) {
+    return path.isAbsolute(override) ? override : path.join(PORTABLE_DATA_ROOT, override);
+  }
+  // 尝试用便携目录；写不了则回退 %APPDATA%（安装版场景）
+  const portableSession = path.join(PORTABLE_DATA_ROOT, 'session');
+  try {
+    fs.mkdirSync(portableSession, { recursive: true });
+    return portableSession;
+  } catch {
+    return path.join(app.getPath('appData'), 'cuckoo-rework-session');
+  }
+})();
 // app.setPath('userData', ...) 要求目标目录必须已存在，否则会抛错导致启动闪退。
 // 用户首次运行或手动删除该目录时，此处负责兜底创建。
 try {

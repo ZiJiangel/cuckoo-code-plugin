@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { createRequire } from 'node:module';
+import { getUserHome } from '../infra/portable-data.js';
 // plugins 是底层模块（纯 node），此依赖向下，不违反依赖方向。
 // 只返回**已授权**插件的 mcp.json —— 未授权时等价于不存在。
 import { getEnabledPluginMcpFiles } from '../plugins/roots.js';
@@ -38,7 +39,7 @@ const { app } = require('electron');
  */
 function getUserDir(): string {
   const override = process.env.CUCKOO_HOME;
-  return override ? override : path.join(os.homedir(), '.cuckoo-rework');
+  return override ? override : getUserHome();
 }
 function getUserConfigFile(): string {
   return path.join(getUserDir(), 'mcp.json');

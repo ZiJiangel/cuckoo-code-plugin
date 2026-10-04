@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { getUserHome } from '../infra/portable-data.js';
 
 export interface Snippet {
   id: string;
@@ -24,7 +25,7 @@ export interface Snippet {
 /** 用户级目录（可用 CUCKOO_HOME 覆盖，供测试隔离） */
 function getUserDir(): string {
   const override = process.env.CUCKOO_HOME;
-  return override ? override : path.join(os.homedir(), '.cuckoo-rework');
+  return override ? override : getUserHome();
 }
 
 function getSnippetsFile(): string {

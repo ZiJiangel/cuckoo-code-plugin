@@ -13,11 +13,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { parseRuleFrontmatter } from './frontmatter.js';
+import { getUserHome } from '../infra/portable-data.js';
 import type { RuleMeta, RuleSource } from './types.js';
 
 /** 用户级目录（可用 CUCKOO_HOME 覆盖，供测试隔离） */
 function getUserRulesDir(): string {
-  const base = process.env.CUCKOO_HOME || path.join(os.homedir(), '.cuckoo-rework');
+  const base = process.env.CUCKOO_HOME || getUserHome();
   return path.join(base, 'rules');
 }
 

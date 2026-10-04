@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { getUserHome } from '../infra/portable-data.js';
 
 export interface FeishuConfig {
   appId: string;
@@ -28,7 +29,7 @@ export interface FeishuConfig {
 
 function getUserDir(): string {
   const override = process.env.CUCKOO_HOME;
-  return override ? override : path.join(os.homedir(), '.cuckoo-rework');
+  return override ? override : getUserHome();
 }
 
 function getConfigFile(): string {

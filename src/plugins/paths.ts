@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { getUserHome } from '../infra/portable-data.js';
 
 /** 清单文件名（唯一必需文件） */
 const MANIFEST_FILE = 'plugin.json';
@@ -40,7 +41,7 @@ function isValidPluginId(id: unknown): id is string {
 /** 用户级根目录。默认 ~/.cuckoo；CUCKOO_HOME 可覆盖（测试隔离 / 用户自定义）。 */
 function getUserDir(): string {
   const override = process.env.CUCKOO_HOME;
-  return override ? override : path.join(os.homedir(), '.cuckoo-rework');
+  return override ? override : getUserHome();
 }
 
 function getPluginsDir(): string {
