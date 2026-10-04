@@ -608,3 +608,22 @@ describe('T5/T6 agents/sessions 核心能力', () => {
     expect(ctx.sessions.get('nope')).toBe(null);
   });
 });
+
+
+describe('T9 对象形式插件', () => {
+  it('export default { name, inject, apply }', () => {
+    const mod = {
+      default: {
+        name: 'obj-plugin',
+        inject: [],
+        apply(ctx) { /* ok */ },
+      },
+    };
+    const host = {
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => null,
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    };
+    const p = loadPluginModule(mod, host);
+    expect(p.name).toBe('obj-plugin');
+  });
+});

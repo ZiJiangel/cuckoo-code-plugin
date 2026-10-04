@@ -38,6 +38,14 @@ function resolveEntry(mod: DshPluginModule, fallbackName?: string): { name: stri
   }
   const m = mod as any;
 
+  // 对象形式：export default { name, inject, apply }
+  if (m.default && typeof m.default === 'object' && typeof m.default.apply === 'function') {
+    const o = m.default;
+    const name = (typeof o.name === 'string' && o.name.trim()) ? o.name.trim() : (fallbackName || 'anonymous-plugin');
+    const inject: ServiceName[] = Array.isArray(o.inject) ? o.inject.filter((x: any) => typeof x === 'string') : [];
+    return { name, inject, apply: o.apply };
+  }
+
   // 类形式：export default class ... extends Service
   // 它没有 apply，而是"实例化即注册服务"。这里包一个 apply 来 new 它。
   const defaultExport = m.default;
