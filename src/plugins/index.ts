@@ -29,6 +29,8 @@ export {
   RULES_DIR,
   MCP_FILE,
   PROVIDERS_DIR,
+  DSH_DIR,
+  UI_DIR,
   isValidPluginId,
   getUserDir,
   getPluginsDir,
@@ -93,6 +95,8 @@ export type { HttpGet, HttpRequest, HttpResponse } from './http.js';
 export {
   getPluginScanRoots,
   getEnabledPluginProviderFiles,
+  getEnabledPluginDshFiles,
+  getEnabledPluginUiFiles,
   getEnabledPluginMcpFiles,
 } from './roots.js';
 export type { PluginScanRoots } from './roots.js';

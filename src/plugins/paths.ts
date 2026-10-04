@@ -21,6 +21,10 @@ const AGENTS_DIR = 'agents';
 const RULES_DIR = 'rules';
 const MCP_FILE = 'mcp.json';
 const PROVIDERS_DIR = 'providers';
+/** DSH 风格插件目录（第 6 条扩展线：DSH 兼容插件入口） */
+const DSH_DIR = 'dsh';
+/** UI 扩展目录（第 7 条扩展线：向界面注入 HTML/JS/CSS） */
+const UI_DIR = 'ui';
 
 /**
  * 插件 id 约束：小写 kebab-case，首字符必须是字母或数字。
@@ -98,6 +102,8 @@ export {
   RULES_DIR,
   MCP_FILE,
   PROVIDERS_DIR,
+  DSH_DIR,
+  UI_DIR,
   PLUGIN_ID_RE,
   isValidPluginId,
   getUserDir,

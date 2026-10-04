@@ -49,6 +49,14 @@ let electronAPI: any = {
   listSessions: () => {
     return ipcRenderer.invoke('list-sessions');
   },
+  /** 拉取已启用插件的 DSH 风格插件源码 */
+  getDshPluginSources: () => {
+    return ipcRenderer.invoke('plugin-dsh-sources');
+  },
+  /** 拉取已启用插件的 UI 扩展源码 */
+  getUiPluginSources: () => {
+    return ipcRenderer.invoke('plugin-ui-sources');
+  },
   navigateSession: (sessionId: any) => {
     return ipcRenderer.invoke('navigate-session', { sessionId });
   },

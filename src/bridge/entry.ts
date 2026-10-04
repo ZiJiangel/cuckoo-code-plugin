@@ -22,6 +22,7 @@ import { startSessionWatcher, startWatchdog, checkSessionChange } from './loop/w
 import { initSubagentIfNeeded } from './subagent.js';
 import { initHarnessBridge } from './harness-bridge.js';
 import { initFeishuBridge } from './feishu-bridge.js';
+import { initDshPlugins } from './dsh-plugins.js';
 
 const require = createRequire(import.meta.url);
 const { webFrame, ipcRenderer } = require('electron');
@@ -208,6 +209,11 @@ function init(): void {
 
     // 飞书同步：上报用户消息/AI回复/工具状态，并接收飞书来消息
     initFeishuBridge();
+
+    // DSH 兼容层：加载 dsh/*.js 风格插件（异步，不阻塞）
+    initDshPlugins().catch((err: any) => {
+      console.error('[Cuckoo Code] 加载 DSH 插件失败:', err && err.message ? err.message : err);
+    });
   } catch (err) {
     console.error('[Cuckoo Code] init() 出错:', err);
     // 兜底：即使出错也强制显示面板

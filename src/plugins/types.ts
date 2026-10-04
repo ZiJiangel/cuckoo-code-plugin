@@ -42,6 +42,10 @@ export interface PluginContributes {
   mcp: boolean;
   /** 可执行文件相对路径列表（风险项，需授权） */
   providers: string[];
+  /** DSH 风格插件入口文件（dsh/ 目录下的 .js，风险项，需授权） */
+  dshPlugins: string[];
+  /** UI 扩展文件（ui/ 目录下的 .js，风险项，需授权） */
+  uiPlugins: string[];
 }
 
 /** 已安装插件 */

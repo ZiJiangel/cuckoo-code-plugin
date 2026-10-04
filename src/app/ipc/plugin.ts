@@ -19,7 +19,11 @@ import {
   setPluginEnabled,
   createElectronHttpGet,
   getPluginsDir,
+  getEnabledPluginDshFiles,
+  getEnabledPluginUiFiles,
 } from '../../plugins/index.js';
+import fs from 'node:fs';
+import path from 'node:path';
 import { invalidateCustomProvidersCache } from '../../providers/custom/loader.js';
 import * as windowState from '../window.js';
 import * as mcpClient from '../../mcp/client.js';
@@ -164,6 +168,48 @@ function registerPluginIpc(): void {
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  // ===== DSH 风格插件：返回已启用插件的 dsh/*.js 源码 =====
+  // 渲染进程读不了 fs，由主进程读源码后传给渲染进程执行。
+  // 安全：只返回【已启用】插件的文件（与 providers 同级，默认关闭）。
+  ipcMain.handle('plugin-dsh-sources', async () => {
+    try {
+      const files = getEnabledPluginDshFiles();
+      const plugins: Array<{ name: string; source: string; file: string }> = [];
+      for (const file of files) {
+        try {
+          const source = fs.readFileSync(file, 'utf-8');
+          const base = path.basename(file, '.js');
+          plugins.push({ name: base, source, file });
+        } catch (err: any) {
+          console.error('[plugin-dsh] 读取失败:', file, err && err.message);
+        }
+      }
+      return { success: true, plugins };
+    } catch (err: any) {
+      return { success: false, plugins: [], error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  // ===== UI 扩展：返回已启用插件的 ui/*.js 源码 =====
+  ipcMain.handle('plugin-ui-sources', async () => {
+    try {
+      const files = getEnabledPluginUiFiles();
+      const plugins: Array<{ name: string; source: string; file: string }> = [];
+      for (const file of files) {
+        try {
+          const source = fs.readFileSync(file, 'utf-8');
+          const base = path.basename(file, '.js');
+          plugins.push({ name: base, source, file });
+        } catch (err: any) {
+          console.error('[plugin-ui] 读取失败:', file, err && err.message);
+        }
+      }
+      return { success: true, plugins };
+    } catch (err: any) {
+      return { success: false, plugins: [], error: err && err.message ? err.message : String(err) };
     }
   });
 
