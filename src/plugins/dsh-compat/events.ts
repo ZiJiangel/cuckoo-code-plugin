@@ -72,13 +72,14 @@ class EventBus {
 
   /** emit：同步广播，忽略返回值 */
   emit(event: string, ...args: any[]): void {
-    for (const { listener, once } of this.snapshot(event)) {
+    const entries = this.snapshot(event);
+    for (const entry of entries) {
       try {
-        listener(...args);
+        entry.listener(...args);
       } catch (err) {
         console.error('[dsh-compat] 事件监听器出错 (' + event + '):', err);
       }
-      if (once) this.removeEntry(event, { listener, once });
+      if (entry.once) this.removeEntry(event, entry);
     }
   }
 
