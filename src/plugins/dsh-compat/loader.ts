@@ -102,14 +102,55 @@ export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, c
 }
 
 /**
+ * 把 ESM 源码转换成可在 `new Function` 里运行的 CommonJS 形式。
+ *
+ * DSH 插件是 ESM（用 \`export const name = ...\`），而 \`new Function\` 是 CJS 环境。
+ * 这里做**最小语法转换**（不引入 bundler）：
+ *   export const name = 'x'      → exports.name = 'x'
+ *   export function apply(...)   → exports.apply = function apply(...)
+ *   export default xxx           → exports.default = xxx
+ *   export { a, b }              → exports.a = a; exports.b = b
+ *
+ * 只覆盖 DSH 插件的常见写法，不做完整 ESM 解析。
+ */
+export function esmToCjs(source: string): string {
+  let out = source;
+  // export const/let/var xxx = ...   （不锚行首，兼容一行多个 export）
+  out = out.replace(/\bexport\s+(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/g, 'exports.$2 =');
+  // export function xxx(...)  → exports.xxx = function xxx(...)
+  out = out.replace(/\bexport\s+function\s+([A-Za-z_$][\w$]*)\s*\(/g, 'exports.$1 = function $1(');
+  // export async function xxx(...)
+  out = out.replace(/\bexport\s+async\s+function\s+([A-Za-z_$][\w$]*)\s*\(/g, 'exports.$1 = async function $1(');
+  // export default xxx
+  out = out.replace(/\bexport\s+default\s+/g, 'exports.default = ');
+  // export { a, b as c }
+  out = out.replace(/\bexport\s*\{([^}]*)\}\s*;?/g, (_m, inner) => {
+    const parts = String(inner).split(',').map((s) => s.trim()).filter(Boolean);
+    return parts
+      .map((p) => {
+        const m = p.match(/^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
+        if (!m) return '';
+        const local = m[1];
+        const exported = m[2] || m[1];
+        return 'exports.' + exported + ' = ' + local + ';';
+      })
+      .join(' ');
+  });
+  return out;
+}
+
+/**
  * 从源码字符串加载（用于 eval / 动态注入场景）
  * 注意：会执行任意代码，调用方须确保来源可信。
+ * 支持 ESM 与 CommonJS 两种写法。
  */
 export function loadPluginSource(source: string, host: HostCapabilities, fallbackName?: string, config?: any): LoadedPlugin {
+  const isEsm = /(^|\n)\s*export\s/.test(source);
+  const code = isEsm ? esmToCjs(source) : source;
   // 用 Function 包装成 CommonJS 模块环境
   const moduleObj = { exports: {} as any };
   const exportsObj = moduleObj.exports;
-  const fn = new Function('module', 'exports', 'require', source + '\n;return module.exports;');
+  const fn = new Function('module', 'exports', 'require', code + '\n;return module.exports;');
   const result = fn(moduleObj, exportsObj, (id: string) => {
     throw new Error('DSH 插件暂不支持 require 外部模块: ' + id);
   });

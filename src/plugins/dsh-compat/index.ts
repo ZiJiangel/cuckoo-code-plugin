@@ -22,7 +22,7 @@ export { EventBus } from './events.js';
 export { createContext } from './context.js';
 export type { HostCapabilities } from './context.js';
 
-export { loadPluginModule, loadPluginSource, safeLoad, resolveEntry, checkInject } from './loader.js';
+export { loadPluginModule, loadPluginSource, safeLoad, resolveEntry, checkInject, esmToCjs } from './loader.js';
 export type { LoadedPlugin } from './loader.js';
 
 export {
