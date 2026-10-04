@@ -142,4 +142,4 @@ export function unloadAllUiPlugins(): void {
   }
 }
 
-export { safeLoad };
+export { safeLoad, attachUi };

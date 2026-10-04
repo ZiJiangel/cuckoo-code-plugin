@@ -17,6 +17,7 @@
  */
 import { loadPluginSource } from './loader.js';
 import type { LoadedPlugin } from './loader.js';
+import { attachUi } from './ui-runtime.js';
 import type { HostCapabilities } from './context.js';
 import type { DshContext } from './types.js';
 import { ServiceRegistryImpl } from './service-registry.js';
@@ -67,7 +68,12 @@ export class PluginHost {
       return { ok: false, error: '插件已加载: ' + source.name };
     }
     try {
-      const plugin = loadPluginSource(source.source, this.host, source.name, undefined, this.registry);
+      const isUi = source.kind === 'ui';
+      const plugin = loadPluginSource(
+        source.source, this.host, source.name, undefined, this.registry,
+        // UI 插件：在 apply 之前附加 ctx.ui
+        isUi ? (ctx) => attachUi(ctx, source.name) : undefined,
+      );
       this.records.set(plugin.name, {
         name: plugin.name,
         kind: source.kind,

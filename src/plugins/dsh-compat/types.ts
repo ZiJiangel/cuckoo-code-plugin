@@ -107,6 +107,14 @@ export interface DshContext {
   get(name: string): any;
   /** 声明依赖某服务：就绪时回调，返回 disposer */
   inject(names: string[], callback: () => void): () => void;
+
+  /** UI 能力（仅 UI 插件有）：挂载 DOM、注入样式 */
+  ui?: {
+    mount(el: any): void;
+    root(): any;
+    css(text: string): void;
+    onResize(cb: (w: number, h: number) => void): () => void;
+  };
 }
 
 /** 服务注册表（跨插件共享） */

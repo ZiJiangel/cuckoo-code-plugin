@@ -287,3 +287,24 @@ describe('PluginHost - 统一插件管理', () => {
     expect(host.load({ name: 'dup', kind: 'dsh', source: src }).ok).toBe(false);
   });
 });
+
+
+describe('PluginHost - UI 插件能力', () => {
+  it('UI 插件拿到 ctx.ui', () => {
+    // 模拟 DOM
+    global.document = {
+      createElement: () => ({ id: '', style: {}, setAttribute: () => {}, appendChild: () => {}, isConnected: true }),
+      getElementById: () => null,
+      body: { appendChild: () => {} },
+      head: { appendChild: () => {} },
+    };
+    const host = new PluginHost(fakeHost());
+    host.load({
+      name: 'ui-p', kind: 'ui',
+      source: `export const name = 'ui-p'; export function apply(ctx) {}`,
+    });
+    // 直接检查该插件 ctx 上有无 ui 能力
+    const c = host.getContext('ui-p');
+    expect(!!(c.ui && c.ui.mount)).toBe(true);
+  });
+});
