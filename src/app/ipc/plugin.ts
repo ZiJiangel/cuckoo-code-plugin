@@ -181,6 +181,15 @@ function registerPluginIpc(): void {
           }
         } catch { /* 无窗口上下文时跳过 */ }
       }
+      // 广播：插件启用状态变了，通知所有窗口热重载 DSH/UI 插件
+      try {
+        for (const ctx of windowState.getAllContexts()) {
+          const wc = ctx && ctx.view && ctx.view.webContents;
+          if (wc && !wc.isDestroyed() && typeof wc.send === 'function') {
+            wc.send('plugin-reload-needed');
+          }
+        }
+      } catch { /* 无多窗口 API 时跳过 */ }
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err && err.message ? err.message : String(err) };

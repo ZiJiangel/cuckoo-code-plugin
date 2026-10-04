@@ -147,3 +147,31 @@ function exposeHostApi(h: PluginHost): void {
 export function unloadAllDshPlugins(): void {
   if (host) host.unloadAll();
 }
+
+/** 重载全部插件（先卸载，再重新拉取加载） */
+export async function reloadDshPlugins(): Promise<void> {
+  const h = getPluginHost();
+  h.unloadAll();
+
+  const dshSources = await fetchSources('dsh');
+  const uiSources = await fetchSources('ui');
+  const all = [...dshSources, ...uiSources];
+  if (all.length === 0) {
+    console.log('[dsh-plugin] 重载后无插件');
+    return;
+  }
+  const result = h.loadAll(all);
+  console.log('[dsh-plugin] 重载完成:', result.loaded.join(', ') || '(无)');
+}
+
+/** 绑定"插件重载"通知（主进程推送） */
+export function bindPluginReload(): void {
+  const api = (window as any).electronAPI;
+  if (!api || typeof api.onPluginReloadNeeded !== 'function') return;
+  api.onPluginReloadNeeded(() => {
+    console.log('[dsh-plugin] 收到重载通知，重新加载插件');
+    reloadDshPlugins().catch((err: any) => {
+      console.error('[dsh-plugin] 重载失败:', err && err.message ? err.message : err);
+    });
+  });
+}

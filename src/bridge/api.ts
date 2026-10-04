@@ -57,6 +57,12 @@ let electronAPI: any = {
   getUiPluginSources: () => {
     return ipcRenderer.invoke('plugin-ui-sources');
   },
+  /** 监听"插件需要重载"通知 */
+  onPluginReloadNeeded: (cb: () => void) => {
+    const handler = () => { try { cb(); } catch (_) {} };
+    ipcRenderer.on('plugin-reload-needed', handler);
+    return () => ipcRenderer.removeListener('plugin-reload-needed', handler);
+  },
   navigateSession: (sessionId: any) => {
     return ipcRenderer.invoke('navigate-session', { sessionId });
   },

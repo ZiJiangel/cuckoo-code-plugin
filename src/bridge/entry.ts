@@ -22,7 +22,7 @@ import { startSessionWatcher, startWatchdog, checkSessionChange } from './loop/w
 import { initSubagentIfNeeded } from './subagent.js';
 import { initHarnessBridge } from './harness-bridge.js';
 import { initFeishuBridge } from './feishu-bridge.js';
-import { initDshPlugins } from './dsh-plugins.js';
+import { initDshPlugins, bindPluginReload } from './dsh-plugins.js';
 
 const require = createRequire(import.meta.url);
 const { webFrame, ipcRenderer } = require('electron');
@@ -214,6 +214,8 @@ function init(): void {
     initDshPlugins().catch((err: any) => {
       console.error('[Cuckoo Code] 加载 DSH 插件失败:', err && err.message ? err.message : err);
     });
+    // 监听插件热重载通知（启用/禁用插件时主进程推送）
+    bindPluginReload();
   } catch (err) {
     console.error('[Cuckoo Code] init() 出错:', err);
     // 兜底：即使出错也强制显示面板
