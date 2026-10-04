@@ -41,17 +41,25 @@ export type DispatchMode = 'emit' | 'parallel' | 'serial' | 'bail' | 'waterfall'
 
 /** agent 服务（对应 DSH 的 ctx.agents） */
 export interface AgentsService {
-  /** 取当前会话的 agent 句柄（简化版） */
+  /** 取当前会话的 agent 句柄 */
   get(sessionId?: string): AgentHandle | null;
+  /** 取当前 agent 句柄（无参快捷方式） */
+  current(): AgentHandle | null;
   /** 列出所有会话 */
   list(): Array<{ id: string; title?: string }>;
 }
 
-/** agent 句柄 */
+/** agent 句柄（对齐 DSH 的 Agent 核心能力） */
 export interface AgentHandle {
   id: string;
+  /** 生命周期状态（简化：'idle' | 'running' | 'unknown'） */
+  status: string;
+  /** 当前会话信息 */
+  session: { id: string | null; projectDir: string | null };
   /** 向该 agent 追加一条用户消息（对应 DSH 的 followup） */
   followup(msg: { role: 'user'; content: string }): Promise<boolean>;
+  /** followup 的别名（对齐 DSH 的 send） */
+  send(msg: { role: 'user'; content: string }): Promise<boolean>;
 }
 
 /** 工具定义（插件注册用，对齐 DSH 的 ToolDefinition 精神） */
@@ -80,6 +88,8 @@ export interface ToolsService {
 export interface SessionsService {
   current(): { id: string | null; projectDir: string | null };
   list(): Array<{ id: string; title?: string }>;
+  /** 按 id 取会话（找不到返回 null） */
+  get(id: string): { id: string; title?: string } | null;
 }
 
 /** settings 服务 */

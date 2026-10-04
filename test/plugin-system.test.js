@@ -575,3 +575,36 @@ describe('T4 服务移除→依赖者卸载', () => {
     expect(host.list()).not.toContain('cons');
   });
 });
+
+
+describe('T5/T6 agents/sessions 核心能力', () => {
+  it('agents.get/current/send/followup/status/session', async () => {
+    const sent = [];
+    const host = {
+      sendToChat: async (t) => { sent.push(t); return true; },
+      getCurrentSessionId: () => 'sess-1', getProjectDir: () => 'D:/proj',
+      listSessions: () => [{ id: 'sess-1', title: 't1' }, { id: 'sess-2' }],
+      listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    };
+    const ctx = createContext('t', host);
+    const a = ctx.agents.current();
+    expect(a.id).toBe('sess-1');
+    expect(a.status).toBe('idle');
+    expect(a.session.id).toBe('sess-1');
+    expect(a.session.projectDir).toBe('D:/proj');
+    await a.followup({ role: 'user', content: 'hi' });
+    await a.send({ role: 'user', content: 'yo' });
+    expect(sent).toEqual(['hi', 'yo']);
+  });
+
+  it('sessions.get 按 id 找', () => {
+    const host = {
+      sendToChat: async () => true, getCurrentSessionId: () => 'sess-1', getProjectDir: () => null,
+      listSessions: () => [{ id: 'sess-1', title: 't1' }, { id: 'sess-2' }],
+      listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    };
+    const ctx = createContext('t', host);
+    expect(ctx.sessions.get('sess-2').id).toBe('sess-2');
+    expect(ctx.sessions.get('nope')).toBe(null);
+  });
+});

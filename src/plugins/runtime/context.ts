@@ -46,16 +46,25 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
   const disposers: Array<() => void> = [];
 
   // ===== 服务：agents =====
+  const makeAgent = (sid: string | null): AgentHandle => ({
+    id: sid || 'current',
+    status: 'idle',
+    session: { id: sid, projectDir: host.getProjectDir() },
+    async followup(msg): Promise<boolean> {
+      if (!msg || typeof msg.content !== 'string') return false;
+      return host.sendToChat(msg.content);
+    },
+    async send(msg): Promise<boolean> {
+      if (!msg || typeof msg.content !== 'string') return false;
+      return host.sendToChat(msg.content);
+    },
+  });
   const agents: AgentsService = {
     get(_sessionId?: string): AgentHandle | null {
-      const sid = host.getCurrentSessionId();
-      return {
-        id: sid || 'current',
-        async followup(msg): Promise<boolean> {
-          if (!msg || typeof msg.content !== 'string') return false;
-          return host.sendToChat(msg.content);
-        },
-      };
+      return makeAgent(host.getCurrentSessionId());
+    },
+    current(): AgentHandle | null {
+      return makeAgent(host.getCurrentSessionId());
     },
     list() {
       return host.listSessions();
@@ -83,6 +92,12 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
   const sessions: SessionsService = {
     current: () => ({ id: host.getCurrentSessionId(), projectDir: host.getProjectDir() }),
     list: () => host.listSessions(),
+    get(id: string) {
+      if (!id) return null;
+      const all = host.listSessions();
+      const found = all.find((s) => s.id === id);
+      return found || null;
+    },
   };
 
   // ===== 服务：settings =====
