@@ -1,7 +1,8 @@
 # Cuckoo 插件开发指南
 
 > 本文档面向插件作者，说明如何为 Cuckoo Code 开发插件。
-> Cuckoo 的插件系统**对标 DSH（DeepSeek Harness）标准**。
+> Cuckoo 拥有**自己的插件体系**，接口规范与能力**参考 DSH（DeepSeek Harness）**——
+> 事件机制、服务、生命周期等设计对齐 DSH，API 命名沿用其风格（降低理解与迁移成本）。
 
 ## 一、插件是什么
 
