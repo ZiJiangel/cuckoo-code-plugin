@@ -1,0 +1,168 @@
+{
+  "name": "cuckoo-code",
+  "version": "0.8.8",
+  "description": "DeepSeek 桌面应用——内嵌浏览器，自动识别 AI 回复中的命令和工具调用并执行",
+  "type": "module",
+  "main": "out/src/app/entry.js",
+  "scripts": {
+    "compile": "node scripts/build-hooks.mjs && tsc -p tsconfig.build.json && node scripts/build-tool-api.mjs && node scripts/build-shell.mjs",
+    "fetch-runtime": "node scripts/fetch-runtime.mjs",
+    "start": "node scripts/fetch-runtime.mjs && node start.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.hooks.json",
+    "lint": "eslint .",
+    "docs:index": "node scripts/build-docs-index.mjs",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "build": "npm run compile && electron-builder --publish always",
+    "build:win": "npm run compile && electron-builder --win --publish always",
+    "build:win:nsis": "npm run compile && electron-builder --win --config.win.target=nsis --publish always",
+    "build:mac": "npm run compile && electron-builder --mac --publish always",
+    "build:mac:dmg": "npm run compile && electron-builder --mac --config.mac.target=dmg --publish always",
+    "build:local": "npm run compile && electron-builder --publish never",
+    "build:win:local": "npm run compile && electron-builder --win --publish never",
+    "build:win:nsis:local": "npm run compile && electron-builder --win --config.win.target=nsis --publish never",
+    "build:mac:local": "npm run compile && electron-builder --mac --publish never",
+    "build:mac:dmg:local": "npm run compile && electron-builder --mac --config.mac.target=dmg --publish never"
+  },
+  "keywords": [
+    "deepseek",
+    "electron",
+    "ai",
+    "cli",
+    "command-execution",
+    "developer-tools",
+    "cuckoo-code"
+  ],
+  "author": {
+    "name": "Cuckoo Code Contributors",
+    "url": "https://github.com/wangyongpeng90/cuckoo-code"
+  },
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangyongpeng90/cuckoo-code.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wangyongpeng90/cuckoo-code/issues"
+  },
+  "homepage": "https://github.com/wangyongpeng90/cuckoo-code#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.6",
+    "@types/picomatch": "^4.0.3",
+    "@vitest/coverage-v8": "^5.0.1",
+    "electron": "^44.4.3",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "katex": "^0.18.9",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "os": [
+    "win32",
+    "darwin",
+    "linux"
+  ],
+  "build": {
+    "appId": "com.cuckoo.cuckoo-code",
+    "productName": "Cuckoo-Code",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "wangyongpeng90",
+        "repo": "cuckoo-code"
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "cuckoo-code-win-v${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "cuckoo-code-mac-v${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "cuckoo-code-win-v${version}.${ext}"
+    },
+    "asarUnpack": [
+      "**/node_modules/@vscode/ripgrep/**",
+      "**/node_modules/@vscode/ripgrep-win32-x64/**"
+    ],
+    "extraResources": [
+      {
+        "from": "src/tools/api.d.ts",
+        "to": "tools/cuckoo-tools.d.ts"
+      },
+      {
+        "from": "resources/runtime",
+        "to": "runtime"
+      }
+    ],
+    "files": [
+      "**/*",
+      "!node_modules/.bin",
+      "!dist",
+      "!build",
+      "!**/*.md",
+      "!LICENSE",
+      "src/prompt/*.md",
+      "src/overlay/template/*.html",
+      "src/overlay/template/*.css",
+      "src/ui/*.html",
+      "src/ui/feishu-images/**",
+      "src/ui/vendor/**"
+    ]
+  },
+  "dependencies": {
+    "@joplin/turndown-plugin-gfm": "^1.0.67",
+    "@larksuiteoapi/node-sdk": "^1.74.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@vscode/ripgrep": "^1.18.0",
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.9",
+    "marked": "^18.0.14",
+    "mysql2": "^3.24.2",
+    "picomatch": "^4.0.7",
+    "tar": "^7.5.22",
+    "turndown": "^7.2.4"
+  },
+  "allowScripts": {
+    "electron@44.4.3": true,
+    "esbuild@0.28.2": true,
+    "electron-winstaller@5.4.0": true,
+    "protobufjs@7.6.6": true
+  }
+}

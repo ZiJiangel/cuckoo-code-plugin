@@ -1,0 +1,25 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          # vitest 的 lcov reporter 输出到 coverage/lcov.info（原写 ./coverage.lcov 路径错误）
+          files: ./coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}

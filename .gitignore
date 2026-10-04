@@ -1,0 +1,59 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn.lock
+
+# Electron
+out/
+dist/
+release/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# User data (contains session/cookies)
+userData/
+
+# Temp
+*.tmp
+temp/
+
+# 打包用的运行时二进制（uv/node，本地下载，不进仓库）
+resources/runtime/
+
+# Project specific
+# .cuckooCode/ 是各项目的工具目录，通常不提交；但本项目自身的约束文件 CUCKOO.md 例外
+.cuckooCode/*
+!.cuckooCode/CUCKOO.md
+.claude/
+
+# .cuckoo/ 下的本地运行时配置（各人不同，不进仓库）
+.cuckoo/mcp.json
+.cuckoo/mcp-state.json
+
+# Playwright MCP 产物（快照/截图）
+.playwright-mcp/
+
+# Coverage reports
+coverage.lcov
+test/coverage.lcov
+coverage/
+/wyp/
+/dist-verify/
+
+# 自定义 Provider 文件（各人私有，不进仓库）
+custom-providers/
