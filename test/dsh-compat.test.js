@@ -6,6 +6,7 @@ import { EventBus } from '../src/plugins/dsh-compat/events.js';
 import { createContext } from '../src/plugins/dsh-compat/context.js';
 import { loadPluginModule, safeLoad } from '../src/plugins/dsh-compat/loader.js';
 import { ServiceRegistryImpl } from '../src/plugins/dsh-compat/service-registry.js';
+import { PluginHost } from '../src/plugins/dsh-compat/plugin-host.js';
 
 /** 一个假的宿主能力 */
 function fakeHost() {
@@ -232,5 +233,57 @@ describe('ctx.provide/get/inject - 服务', () => {
     expect(ready).toBe(false);
     ctxA.provide('shared', { x: 1 });
     expect(ready).toBe(true);
+  });
+});
+
+
+describe('PluginHost - 统一插件管理', () => {
+  it('加载多个插件', () => {
+    const host = new PluginHost(fakeHost());
+    const r = host.loadAll([
+      { name: 'p1', kind: 'dsh', source: `export const name = 'p1'; export function apply() {}` },
+      { name: 'p2', kind: 'ui', source: `export const name = 'p2'; export function apply() {}` },
+    ]);
+    expect(r.loaded).toEqual(['p1', 'p2']);
+    expect(host.stats()).toEqual({ total: 2, dsh: 1, ui: 1, failed: 0 });
+  });
+
+  it('加载失败被记录', () => {
+    const host = new PluginHost(fakeHost());
+    const r = host.loadAll([{ name: 'bad', kind: 'dsh', source: `export const name = 'bad';` }]);
+    expect(r.loaded).toEqual([]);
+    expect(r.failed.length).toBe(1);
+    expect(host.stats().failed).toBe(1);
+  });
+
+  it('卸载插件', () => {
+    const host = new PluginHost(fakeHost());
+    host.load({ name: 'x', kind: 'dsh', source: `export const name = 'x'; export function apply() {}` });
+    expect(host.list()).toEqual(['x']);
+    expect(host.unload('x')).toBe(true);
+    expect(host.list()).toEqual([]);
+  });
+
+  it('跨插件服务注入', () => {
+    const host = new PluginHost(fakeHost());
+    host.load({
+      name: 'provider', kind: 'dsh',
+      source: `export const name = 'provider'; export function apply(ctx) { ctx.provide('svc', { v: 42 }); }`,
+    });
+    let got = null;
+    host.load({
+      name: 'consumer', kind: 'dsh',
+      source: `export const name = 'consumer'; export function apply(ctx) { got = ctx.get('svc'); }`,
+    });
+    // consumer 加载后能取到 provider 提供的服务
+    const ctxC = host.getContext('consumer');
+    expect(ctxC.get('svc').v).toBe(42);
+  });
+
+  it('重复加载同名插件被拒', () => {
+    const host = new PluginHost(fakeHost());
+    const src = `export const name = 'dup'; export function apply() {}`;
+    expect(host.load({ name: 'dup', kind: 'dsh', source: src }).ok).toBe(true);
+    expect(host.load({ name: 'dup', kind: 'dsh', source: src }).ok).toBe(false);
   });
 });

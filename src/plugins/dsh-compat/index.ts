@@ -44,3 +44,6 @@ export type { PatchInsert, PatchParseResult } from './patch.js';
 
 export { ServiceRegistryImpl, serviceRegistry } from './service-registry.js';
 export type { ServiceRegistryInternal } from './service-registry.js';
+
+export { PluginHost } from './plugin-host.js';
+export type { PluginKind, PluginRecord, LoadFailure, PendingPluginSource } from './plugin-host.js';
