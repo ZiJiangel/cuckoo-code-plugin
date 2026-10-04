@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MCP 配置管理（项目级 + 用户级）
  *
  * 配置格式：Claude Desktop 兼容（可直接分享/导入）
@@ -38,7 +38,7 @@ const { app } = require('electron');
  */
 function getUserDir(): string {
   const override = process.env.CUCKOO_HOME;
-  return override ? override : path.join(os.homedir(), '.cuckoo');
+  return override ? override : path.join(os.homedir(), '.cuckoo-rework');
 }
 function getUserConfigFile(): string {
   return path.join(getUserDir(), 'mcp.json');

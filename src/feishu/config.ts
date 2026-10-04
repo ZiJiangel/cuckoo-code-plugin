@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 飞书同步：配置读写（用户级 ~/.cuckoo/feishu.json）
  *
  * 存储：{ appId, appSecret, enabled, pushUserMessage, pushAiReply,
@@ -28,7 +28,7 @@ export interface FeishuConfig {
 
 function getUserDir(): string {
   const override = process.env.CUCKOO_HOME;
-  return override ? override : path.join(os.homedir(), '.cuckoo');
+  return override ? override : path.join(os.homedir(), '.cuckoo-rework');
 }
 
 function getConfigFile(): string {

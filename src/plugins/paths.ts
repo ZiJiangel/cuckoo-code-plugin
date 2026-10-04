@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 插件路径解析（**纯 node，无 electron 依赖**，可在 vitest 直接测）
  *
  * 目录约定（对齐 skills/agents/rules 的 ~/.cuckoo 约定）：
@@ -40,7 +40,7 @@ function isValidPluginId(id: unknown): id is string {
 /** 用户级根目录。默认 ~/.cuckoo；CUCKOO_HOME 可覆盖（测试隔离 / 用户自定义）。 */
 function getUserDir(): string {
   const override = process.env.CUCKOO_HOME;
-  return override ? override : path.join(os.homedir(), '.cuckoo');
+  return override ? override : path.join(os.homedir(), '.cuckoo-rework');
 }
 
 function getPluginsDir(): string {

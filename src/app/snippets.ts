@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 快捷提示词（Snippets）管理
  *
  * 存储：~/.cuckoo/snippets.json（用户级，所有项目通用）
@@ -24,7 +24,7 @@ export interface Snippet {
 /** 用户级目录（可用 CUCKOO_HOME 覆盖，供测试隔离） */
 function getUserDir(): string {
   const override = process.env.CUCKOO_HOME;
-  return override ? override : path.join(os.homedir(), '.cuckoo');
+  return override ? override : path.join(os.homedir(), '.cuckoo-rework');
 }
 
 function getSnippetsFile(): string {

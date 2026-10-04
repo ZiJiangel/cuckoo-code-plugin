@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 规则扫描：项目级 + 用户级目录 → RuleMeta[]
  *
  * 目录约定（对齐 Claude Code）：
@@ -17,7 +17,7 @@ import type { RuleMeta, RuleSource } from './types.js';
 
 /** 用户级目录（可用 CUCKOO_HOME 覆盖，供测试隔离） */
 function getUserRulesDir(): string {
-  const base = process.env.CUCKOO_HOME || path.join(os.homedir(), '.cuckoo');
+  const base = process.env.CUCKOO_HOME || path.join(os.homedir(), '.cuckoo-rework');
   return path.join(base, 'rules');
 }
 
