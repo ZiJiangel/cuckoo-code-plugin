@@ -553,3 +553,25 @@ export default class X extends Service {
     expect(cjs).not.toMatch(/\bexport\b/);
   });
 });
+
+
+describe('T4 服务移除→依赖者卸载', () => {
+  it('依赖服务被移除时，依赖它的插件被卸载', () => {
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    // provider 提供服务
+    host.load({ name: 'prov', kind: 'dsh',
+      source: `export const name = 'prov'; export function apply(ctx) { ctx.provide('svc-x', { v: 1 }); }` });
+    // consumer 依赖 svc-x
+    host.load({ name: 'cons', kind: 'dsh',
+      source: `export const name = 'cons'; export const inject = ['svc-x']; export function apply(ctx) {}` });
+    expect(host.list()).toContain('cons');
+
+    // 移除 provider（其 provide 的 disposer 在 dispose 时触发 onRemove）
+    host.unload('prov');
+    // 依赖 svc-x 的 cons 应被卸载
+    expect(host.list()).not.toContain('cons');
+  });
+});

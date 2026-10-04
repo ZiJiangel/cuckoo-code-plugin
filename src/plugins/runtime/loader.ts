@@ -23,6 +23,8 @@ import type { DshContext, DshPluginModule, ServiceName, LoadResult, ServiceRegis
 export interface LoadedPlugin {
   name: string;
   ctx: DshContext;
+  /** 该插件声明的依赖服务（供 PluginHost 跟踪） */
+  inject: string[];
   dispose(): void;
 }
 
@@ -164,6 +166,7 @@ export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, c
   return {
     name,
     ctx,
+    inject,
     dispose: () => {
       const dispose = (ctx as any).__dispose;
       if (typeof dispose === 'function') dispose();

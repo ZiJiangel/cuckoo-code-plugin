@@ -89,6 +89,8 @@ export class PluginHost {
   private records = new Map<string, PluginRecord>();
   private failures: LoadFailure[] = [];
   private registry = new ServiceRegistryImpl();
+  /** 每个插件的依赖监听清理器 */
+  private depCleanups = new Map<string, Array<() => void>>();
 
   constructor(private host: HostCapabilities) {}
 
@@ -115,6 +117,15 @@ export class PluginHost {
         plugin,
         loadedAt: Date.now(),
       });
+      // T4：跟踪依赖——服务被移除时，卸载依赖它的插件
+      for (const svc of plugin.inject || []) {
+        const off = this.registry.onRemove(svc, () => {
+          console.warn('[plugin] 依赖服务被移除，卸载插件: ' + plugin.name + ' (依赖 ' + svc + ')');
+          this.unload(plugin.name);
+        });
+        this.depCleanups.set(plugin.name, this.depCleanups.get(plugin.name) || []);
+        this.depCleanups.get(plugin.name)!.push(off);
+      }
       return { ok: true };
     } catch (err: any) {
       const raw = err && err.message ? err.message : String(err);
@@ -143,6 +154,12 @@ export class PluginHost {
       rec.plugin.dispose();
     } catch (err) {
       console.error('[plugin] 卸载插件出错 (' + name + '):', err);
+    }
+    // 清理依赖监听
+    const cleans = this.depCleanups.get(name);
+    if (cleans) {
+      for (const c of cleans) { try { c(); } catch (_) {} }
+      this.depCleanups.delete(name);
     }
     this.records.delete(name);
     return true;
