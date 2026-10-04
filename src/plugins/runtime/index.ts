@@ -18,6 +18,7 @@ export type {
   ServiceName, EventListener, DispatchMode, LoadResult, DshScope,
 } from './types.js';
 
+export { Service } from './service.js';
 export { EventBus } from './events.js';
 export { createContext } from './context.js';
 export type { HostCapabilities } from './context.js';

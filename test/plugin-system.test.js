@@ -6,6 +6,8 @@ import { EventBus } from '../src/plugins/runtime/events.js';
 import { createContext } from '../src/plugins/runtime/context.js';
 import { loadPluginModule, safeLoad } from '../src/plugins/runtime/loader.js';
 import { ServiceRegistryImpl } from '../src/plugins/runtime/service-registry.js';
+import { Service } from '../src/plugins/runtime/service.js';
+import { esmToCjs } from '../src/plugins/runtime/loader.js';
 import { PluginHost, diagnose } from '../src/plugins/runtime/plugin-host.js';
 import { registerContext, unregisterContext, bindCuckooEvents } from '../src/plugins/runtime/bridge.js';
 
@@ -499,5 +501,55 @@ describe('ctx.tools.register（插件注册工具）', () => {
   it('缺 execute 抛错', () => {
     const ctx = createContext('tool-plugin', fakeHost());
     expect(() => ctx.tools.register({ name: 'x', description: 'x' })).toThrow();
+  });
+});
+
+
+describe('类形式插件（extends Service）', () => {
+  it('类形式插件提供服务', () => {
+    const reg = new ServiceRegistryImpl();
+    const src = `
+import { Service } from 'cuckoo'
+export default class Metrics extends Service {
+  static inject = []
+  constructor(ctx) {
+    super(ctx, 'metrics')
+  }
+  record(x) { return 'recorded:' + x }
+}
+`;
+    const mod = { exports: {} };
+    const fn = new Function('module', 'exports', 'require', `
+const { Service } = require('cuckoo');
+exports.default = class Metrics extends Service {
+  constructor(ctx) { super(ctx, 'metrics'); }
+  record(x) { return 'recorded:' + x; }
+};
+`);
+    fn(mod, mod.exports, (id) => {
+      if (id === 'cuckoo') return { Service };
+      throw new Error('no: ' + id);
+    });
+    const host = {
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    };
+    const p = loadPluginModule(mod.exports, host, undefined, reg);
+    expect(p.name).toBe('Metrics');
+    // 服务已注册
+    expect(reg.has('metrics')).toBe(true);
+    expect(reg.get('metrics').record('x')).toBe('recorded:x');
+  });
+
+  it('esmToCjs 转换 import + class', () => {
+    const src = `import { Service } from 'cuckoo'
+export default class X extends Service {
+  constructor(ctx) { super(ctx, 'x') }
+}`;
+    const cjs = esmToCjs(src);
+    expect(cjs).toContain("require('cuckoo')");
+    expect(cjs).toContain('exports.default =');
+    expect(cjs).not.toMatch(/\bimport\b/);
+    expect(cjs).not.toMatch(/\bexport\b/);
   });
 });

@@ -15,6 +15,7 @@
  *   4. 禁止裸 export default apply（会导致 inject 丢失）
  */
 import { createContext } from './context.js';
+import { Service } from './service.js';
 import type { HostCapabilities } from './context.js';
 import type { DshContext, DshPluginModule, ServiceName, LoadResult, ServiceRegistry } from './types.js';
 
@@ -35,10 +36,24 @@ function resolveEntry(mod: DshPluginModule, fallbackName?: string): { name: stri
   }
   const m = mod as any;
 
+  // 类形式：export default class ... extends Service
+  // 它没有 apply，而是"实例化即注册服务"。这里包一个 apply 来 new 它。
+  const defaultExport = m.default;
+  if (typeof defaultExport === 'function' && isServiceClass(defaultExport) && typeof m.apply !== 'function') {
+    const className = typeof defaultExport.name === 'string' && defaultExport.name
+      ? defaultExport.name
+      : (fallbackName || 'anonymous-service');
+    const apply = (ctx: any) => { new defaultExport(ctx); };
+    const inject: ServiceName[] = Array.isArray(defaultExport.inject)
+      ? defaultExport.inject.filter((x: any) => typeof x === 'string')
+      : (Array.isArray(m.inject) ? m.inject.filter((x: any) => typeof x === 'string') : []);
+    return { name: className, inject, apply };
+  }
+
   // 兼容：命名导出 或 直接的 apply 字段
   const apply = typeof m.apply === 'function' ? m.apply
-    : typeof m.default === 'function' ? m.default
-    : typeof m === 'function' ? m
+    : typeof m.default === 'function' && !isClass(m.default) ? m.default
+    : typeof m === 'function' && !isClass(m) ? m
     : null;
 
   if (!apply) {
@@ -51,12 +66,27 @@ function resolveEntry(mod: DshPluginModule, fallbackName?: string): { name: stri
 
   const inject: ServiceName[] = Array.isArray(m.inject) ? m.inject.filter((x: any) => typeof x === 'string') : [];
 
-  // 校验：裸 default 会丢 inject（DSH 红线）
-  if (!m.name && m.default && !m.apply) {
+  // 校验：裸 default 会丢 inject（DSH 红线）——但 class 形式除外（它靠 static inject）
+  if (!m.name && m.default && !m.apply && !isClass(m.default)) {
     throw new Error('插件用裸 export default 导出，会导致 inject 丢失；请改用命名导出 apply');
   }
 
   return { name, inject, apply };
+}
+
+/** 判断一个函数是否是 class（用源码文本） */
+function isClass(fn: any): boolean {
+  try {
+    if (typeof fn !== 'function') return false;
+    return /^\s*class\s/.test(Function.prototype.toString.call(fn));
+  } catch {
+    return false;
+  }
+}
+
+/** 判断一个类是否"看起来像 Service"（有 name 属性、构造器接受 ctx） */
+function isServiceClass(cls: any): boolean {
+  return isClass(cls);
 }
 
 /**
@@ -176,6 +206,19 @@ export function esmToCjs(source: string): string {
       })
       .join(' ');
   });
+  // import { A, B as C } from 'xxx'  → const { A, B: C } = require('xxx')
+  out = out.replace(/\bimport\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]\s*;?/g, (_m, names, from) => {
+    const mapped = String(names).split(',').map((s) => s.trim()).filter(Boolean).map((s) => {
+      const mm = s.match(/^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
+      if (!mm) return '';
+      return mm[2] ? (mm[1] + ': ' + mm[2]) : mm[1];
+    }).filter(Boolean).join(', ');
+    return 'const { ' + mapped + " } = require('" + from + "');";
+  });
+  // import X from 'xxx'  → const X = require('xxx')
+  out = out.replace(/\bimport\s+([A-Za-z_$][\w$]*)\s+from\s*['"]([^'"]+)['"]\s*;?/g, (_m, def, from) => {
+    return "const " + def + " = require('" + from + "');";
+  });
   return out;
 }
 
@@ -192,6 +235,10 @@ export function loadPluginSource(source: string, host: HostCapabilities, fallbac
   const exportsObj = moduleObj.exports;
   const fn = new Function('module', 'exports', 'require', code + '\n;return module.exports;');
   const result = fn(moduleObj, exportsObj, (id: string) => {
+    // 插件可 import/require 的"内置模块"：Service 基类
+    if (id === 'cuckoo' || id === '@deepseek-ai/cordis' || id === 'cuckoo-plugin') {
+      return { Service };
+    }
     throw new Error('DSH 插件暂不支持 require 外部模块: ' + id);
   });
   const mod = (result && (typeof result === 'object' || typeof result === 'function')) ? result : moduleObj.exports;
