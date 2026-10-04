@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 模块入口
+﻿/**
+ * Cuckoo 插件系统 - 模块入口
  *
  * 让 Cuckoo 支持 DSH（DeepSeek Harness）风格的插件：
  *   export const name = 'my-plugin'

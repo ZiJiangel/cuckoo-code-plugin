@@ -1,44 +1,50 @@
-# @cuckoo/dsh-compat
+# Cuckoo 插件运行时（plugin runtime）
 
-Cuckoo 的 **DSH（DeepSeek Harness）插件兼容层**。
+Cuckoo 的**插件系统核心**。
 
-让 Cuckoo 支持 DSH 风格的插件：
+> 定位：这是 **Cuckoo 自己的插件体系**，接口规范与能力**参考 DSH（DeepSeek Harness）**。
+> 不是"兼容层"，而是 Cuckoo 原生的插件能力。
+
+## 插件怎么写
+
+用 ESM 命名导出：
 
 ```js
 export const name = 'my-plugin'
-export const inject = ['agents']
+export const inject = ['agents']        // 声明依赖的服务（可选）
 export function apply(ctx, config) {
   ctx.on('session/event', (rec) => { ... })
+  ctx.effect(() => () => { /* 清理 */ })
 }
 ```
 
 ## 特点
 
 - **零外部依赖**：所有 import 都是相对的，模块自包含
-- **对标 DSH**：入口契约、5 种事件派发、服务、事件域全部对齐
+- **能力对齐 DSH**：入口契约、5 种事件派发、服务、生命周期
 - **可独立复用**：可单独抽出用于其他 Electron/Web 项目
 
 ## 模块结构
 
 | 文件 | 职责 |
 |------|------|
-| `types.ts` | 类型定义（DshContext / 服务 / 事件） |
+| `types.ts` | 类型定义（PluginContext / 服务 / 事件） |
 | `events.ts` | EventBus：5 种派发（emit/parallel/serial/bail/waterfall） |
-| `context.ts` | `createContext`：宿主能力 → DSH ctx（含 effect/provide/inject） |
+| `context.ts` | `createContext`：宿主能力 → 插件上下文 |
 | `loader.ts` | 入口契约解析 + 加载（含 ESM→CJS 转换） |
-| `bridge.ts` | Cuckoo 事件 → DSH 事件名桥 |
-| `runtime.ts` | DSH 插件运行时 |
+| `bridge.ts` | Cuckoo 事件 → 插件事件名桥 |
+| `runtime.ts` | 插件运行时 |
 | `ui-runtime.ts` | UI 扩展运行时（`ctx.ui.mount` 等） |
-| `patch.ts` | `cordis.patch.yml` 解析 |
+| `patch.ts` | `cordis.patch.yml` 解析（配置声明） |
 | `service-registry.ts` | 服务注册表（provide/get/inject） |
-| `plugin-host.ts` | `PluginHost`：统一生命周期管理 |
+| `plugin-host.ts` | `PluginHost`：统一生命周期 + 错误诊断 |
 | `index.ts` | 模块入口 |
 
 ## 核心 API
 
 ### PluginHost（推荐）
 ```ts
-import { PluginHost } from './dsh-compat/index.js'
+import { PluginHost } from './runtime/index.js'
 
 const host = new PluginHost(hostCapabilities)
 host.loadAll([
@@ -51,7 +57,7 @@ host.unload('p1')
 
 ### 底层 API
 ```ts
-import { loadPluginSource, createContext, EventBus, parseCordisPatch } from './dsh-compat/index.js'
+import { loadPluginSource, createContext, EventBus, parseCordisPatch } from './runtime/index.js'
 ```
 
 ## ctx API（给插件用）
@@ -71,13 +77,14 @@ import { loadPluginSource, createContext, EventBus, parseCordisPatch } from './d
 - `ctx.get(name)`
 - `ctx.inject([names], cb)`
 
-### 可逆副作用
+### 可逆副作用 / 作用域
 - `ctx.effect(fn)` — fn 返回 cleanup
+- `ctx.scope()` — 子作用域，独立生命周期
 
 ### UI（仅 ui 类插件）
 - `ctx.ui.mount(el)` / `css(text)` / `root()` / `onResize(cb)`
 
-## 标准事件（对齐 DSH）
+## 标准事件
 
 | 事件 | 载荷 |
 |------|------|
@@ -90,11 +97,4 @@ import { loadPluginSource, createContext, EventBus, parseCordisPatch } from './d
 
 ## 测试
 
-模块自带单元测试（见 `test/dsh-compat.test.js`），31 个用例覆盖：
-- EventBus 5 种派发
-- createContext 服务
-- effect / provide / inject
-- 入口契约校验
-- cordis.patch.yml 解析
-- PluginHost 生命周期
-- 事件桥
+见 `test/plugin-system.test.js`。

@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 事件系统
+﻿/**
+ * Cuckoo 插件系统 - 事件系统
  *
  * 实现 DSH（Cordis）的 5 种事件派发模式：
  *  - emit      : 同步广播，不收集返回值
@@ -77,7 +77,7 @@ class EventBus {
       try {
         entry.listener(...args);
       } catch (err) {
-        console.error('[dsh-compat] 事件监听器出错 (' + event + '):', err);
+        console.error('[plugin] 事件监听器出错 (' + event + '):', err);
       }
       if (entry.once) this.removeEntry(event, entry);
     }
@@ -91,7 +91,7 @@ class EventBus {
         try {
           return await listener(...args);
         } catch (err) {
-          console.error('[dsh-compat] parallel 监听器出错 (' + event + '):', err);
+          console.error('[plugin] parallel 监听器出错 (' + event + '):', err);
           return undefined;
         }
       })
@@ -111,7 +111,7 @@ class EventBus {
           return r;
         }
       } catch (err) {
-        console.error('[dsh-compat] serial 监听器出错 (' + event + '):', err);
+        console.error('[plugin] serial 监听器出错 (' + event + '):', err);
       }
     }
     for (const e of entries) if (e.once) this.removeEntry(event, e);
@@ -129,7 +129,7 @@ class EventBus {
           return r;
         }
       } catch (err) {
-        console.error('[dsh-compat] bail 监听器出错 (' + event + '):', err);
+        console.error('[plugin] bail 监听器出错 (' + event + '):', err);
       }
     }
     for (const e of entries) if (e.once) this.removeEntry(event, e);
@@ -160,7 +160,7 @@ class EventBus {
         // 没调 next 也没返回 → 视为短路，返回当前
         return current;
       } catch (err) {
-        console.error('[dsh-compat] waterfall 监听器出错 (' + event + '):', err);
+        console.error('[plugin] waterfall 监听器出错 (' + event + '):', err);
         return current;
       }
     };

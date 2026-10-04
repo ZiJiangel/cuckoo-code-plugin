@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 运行时加载器
+﻿/**
+ * Cuckoo 插件系统 - 运行时加载器
  *
  * 职责：在渲染进程里，把主进程扫描到的 DSH 插件文件加载并激活。
  *
@@ -44,7 +44,7 @@ export function loadDshPlugins(plugins: PendingPlugin[], host: HostCapabilities,
       okNames.push(result.plugin.name);
     } else {
       failures.push({ name: p.name, error: result.error || '未知错误' });
-      console.error('[dsh-compat] 加载插件失败 (' + p.name + '):', result.error);
+      console.error('[plugin] 加载插件失败 (' + p.name + '):', result.error);
     }
   }
 
@@ -63,7 +63,7 @@ export function unloadAllDshPlugins(): void {
       unregisterContext(p.ctx);
       p.dispose();
     } catch (err) {
-      console.error('[dsh-compat] 卸载插件失败 (' + p.name + '):', err);
+      console.error('[plugin] 卸载插件失败 (' + p.name + '):', err);
     }
   }
   loaded.length = 0;

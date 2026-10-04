@@ -1,13 +1,13 @@
-/**
+﻿/**
  * DSH 兼容层单元测试
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { EventBus } from '../src/plugins/dsh-compat/events.js';
-import { createContext } from '../src/plugins/dsh-compat/context.js';
-import { loadPluginModule, safeLoad } from '../src/plugins/dsh-compat/loader.js';
-import { ServiceRegistryImpl } from '../src/plugins/dsh-compat/service-registry.js';
-import { PluginHost, diagnose } from '../src/plugins/dsh-compat/plugin-host.js';
-import { registerContext, unregisterContext, bindCuckooEvents } from '../src/plugins/dsh-compat/bridge.js';
+import { EventBus } from '../src/plugins/runtime/events.js';
+import { createContext } from '../src/plugins/runtime/context.js';
+import { loadPluginModule, safeLoad } from '../src/plugins/runtime/loader.js';
+import { ServiceRegistryImpl } from '../src/plugins/runtime/service-registry.js';
+import { PluginHost, diagnose } from '../src/plugins/runtime/plugin-host.js';
+import { registerContext, unregisterContext, bindCuckooEvents } from '../src/plugins/runtime/bridge.js';
 
 /** 一个假的宿主能力 */
 function fakeHost() {
@@ -155,7 +155,7 @@ describe('loadPluginModule - 入口契约', () => {
 });
 
 import { describe, it, expect } from 'vitest';
-import { parseCordisPatch, hasPatchDeclared } from '../src/plugins/dsh-compat/patch.js';
+import { parseCordisPatch, hasPatchDeclared } from '../src/plugins/runtime/patch.js';
 
 describe('parseCordisPatch', () => {
   it('解析单个 insert', () => {

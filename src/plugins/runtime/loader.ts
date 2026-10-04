@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 插件加载器
+﻿/**
+ * Cuckoo 插件系统 - 插件加载器
  *
  * 职责：
  *  - 接收一个"DSH 风格插件模块"（已 require 的对象，或源码字符串）
@@ -86,7 +86,7 @@ export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, c
   // apply 之前的钩子（如给 UI 插件附加 ctx.ui）
   if (beforeApply) {
     try { beforeApply(ctx); } catch (err) {
-      console.error('[dsh-compat] beforeApply 出错 (' + name + '):', err);
+      console.error('[plugin] beforeApply 出错 (' + name + '):', err);
     }
   }
 
@@ -96,11 +96,11 @@ export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, c
       const ret = apply(ctx, config);
       if (ret && typeof (ret as any).then === 'function') {
         (ret as Promise<any>).catch((err: any) => {
-          console.error('[dsh-compat] 插件 apply 异步出错 (' + name + '):', err);
+          console.error('[plugin] 插件 apply 异步出错 (' + name + '):', err);
         });
       }
     } catch (err: any) {
-      console.error('[dsh-compat] 插件 apply 出错 (' + name + '):', err && err.message ? err.message : err);
+      console.error('[plugin] 插件 apply 出错 (' + name + '):', err && err.message ? err.message : err);
     }
   };
 

@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 类型定义
+﻿/**
+ * Cuckoo 插件系统 - 类型定义
  *
  * 目标：在 Cuckoo 里模拟 DSH（DeepSeek Harness）的插件标准，
  * 让 DSH 风格插件（export const name / inject / apply(ctx)）能简单迁移过来。

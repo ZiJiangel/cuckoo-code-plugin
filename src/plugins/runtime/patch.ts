@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - cordis.patch.yml 解析
+﻿/**
+ * Cuckoo 插件系统 - cordis.patch.yml 解析
  *
  * DSH 插件用 cordis.patch.yml 声明"往插件树里插入什么"：
  *   - insert: 插入条目（id + name + config）

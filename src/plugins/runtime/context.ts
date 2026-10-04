@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 上下文对象（ctx）
+﻿/**
+ * Cuckoo 插件系统 - 上下文对象（ctx）
  *
  * 把 Cuckoo 已有的能力包装成 DSH 风格的服务 + 事件：
  *   ctx.agents   ← chat-input / 会话
@@ -115,7 +115,7 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
           return cleanup;
         }
       } catch (err) {
-        console.error('[dsh-compat] effect 执行出错 (' + name + '):', err);
+        console.error('[plugin] effect 执行出错 (' + name + '):', err);
       }
       return () => {};
     },
@@ -134,7 +134,7 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
               return cleanup;
             }
           } catch (err) {
-            console.error('[dsh-compat] scope.effect 出错 (' + name + '):', err);
+            console.error('[plugin] scope.effect 出错 (' + name + '):', err);
           }
           return () => {};
         },
@@ -188,7 +188,7 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
           if (fired) return;
           fired = true;
           try { callback(); } catch (err) {
-            console.error('[dsh-compat] inject 回调出错 (' + name + '):', err);
+            console.error('[plugin] inject 回调出错 (' + name + '):', err);
           }
         }));
       }

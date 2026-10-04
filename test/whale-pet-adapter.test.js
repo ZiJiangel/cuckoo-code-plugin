@@ -1,8 +1,8 @@
-/**
+﻿/**
  * 桌宠适配器测试（模拟 DOM，不启动 Electron）
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadPluginSource } from '../src/plugins/dsh-compat/loader.js';
+import { loadPluginSource } from '../src/plugins/runtime/loader.js';
 
 /** 极简 DOM 模拟 */
 function fakeDom() {

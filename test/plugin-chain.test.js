@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 完整插件加载链路测试（隔离，不启动 Electron）
  * 模拟：插件文件 → 读源码 → 解析 config → PluginHost 加载
  */
@@ -23,8 +23,8 @@ describe('完整插件加载链路', () => {
   it('文件 → 源码 → PluginHost 加载', async () => {
     const paths = await import('../src/plugins/paths.js');
     const state = await import('../src/plugins/state.js');
-    const { PluginHost } = await import('../src/plugins/dsh-compat/plugin-host.js');
-    const { parseCordisPatch } = await import('../src/plugins/dsh-compat/patch.js');
+    const { PluginHost } = await import('../src/plugins/runtime/plugin-host.js');
+    const { parseCordisPatch } = await import('../src/plugins/runtime/patch.js');
 
     // 造一个插件
     const dir = path.join(paths.getPluginsDir(), 'chain-plug');

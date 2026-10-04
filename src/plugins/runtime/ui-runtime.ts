@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - UI 扩展运行时
+﻿/**
+ * Cuckoo 插件系统 - UI 扩展运行时
  *
  * 加载插件的 ui/*.js，把 UI 扩展注入页面。
  *
@@ -114,7 +114,7 @@ export function loadUiPlugins(plugins: PendingUiPlugin[], host: HostCapabilities
       okNames.push(result.plugin.name);
     } else {
       failures.push({ name: p.name, error: result.error || '未知错误' });
-      console.error('[dsh-compat] 加载 UI 插件失败 (' + p.name + '):', result.error);
+      console.error('[plugin] 加载 UI 插件失败 (' + p.name + '):', result.error);
     }
   }
 
@@ -132,7 +132,7 @@ export function unloadAllUiPlugins(): void {
       unregisterContext(p.ctx);
       p.dispose();
     } catch (err) {
-      console.error('[dsh-compat] 卸载 UI 插件失败 (' + p.name + '):', err);
+      console.error('[plugin] 卸载 UI 插件失败 (' + p.name + '):', err);
     }
   }
   loaded.length = 0;

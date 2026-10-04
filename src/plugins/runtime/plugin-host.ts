@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 插件运行时管理器（PluginHost）
+﻿/**
+ * Cuckoo 插件系统 - 插件运行时管理器（PluginHost）
  *
  * 统一管理所有 DSH 风格插件（含 dsh/ 和 ui/ 两类）的生命周期：
  *   - 注册 / 加载 / 卸载
@@ -142,7 +142,7 @@ export class PluginHost {
     try {
       rec.plugin.dispose();
     } catch (err) {
-      console.error('[dsh-compat] 卸载插件出错 (' + name + '):', err);
+      console.error('[plugin] 卸载插件出错 (' + name + '):', err);
     }
     this.records.delete(name);
     return true;
@@ -195,7 +195,7 @@ export class PluginHost {
       const bus = (rec.plugin.ctx as any).__bus;
       if (bus && typeof bus.emit === 'function') {
         try { bus.emit(event, ...args); } catch (err) {
-          console.error('[dsh-compat] 广播事件出错 (' + event + '):', err);
+          console.error('[plugin] 广播事件出错 (' + event + '):', err);
         }
       }
     }

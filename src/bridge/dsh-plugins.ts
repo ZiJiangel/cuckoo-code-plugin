@@ -1,14 +1,14 @@
-/**
- * DSH 兼容层 - 渲染进程接线（用 PluginHost 统一管理）
+﻿/**
+ * Cuckoo 插件系统 - 渲染进程接线（用 PluginHost 统一管理）
  *
  * 把 Cuckoo 运行时能力包装成宿主能力，拉取 dsh/ 和 ui/ 插件源码，
  * 交给 PluginHost 统一加载。
  *
  * 依赖方向：bridge 层，可依赖 overlay（发消息）。
  */
-import { PluginHost } from '../plugins/dsh-compat/index.js';
-import type { HostCapabilities, CuckooEventSource, PendingPluginSource } from '../plugins/dsh-compat/index.js';
-import { bindCuckooEvents } from '../plugins/dsh-compat/index.js';
+import { PluginHost } from '../plugins/runtime/index.js';
+import type { HostCapabilities, CuckooEventSource, PendingPluginSource } from '../plugins/runtime/index.js';
+import { bindCuckooEvents } from '../plugins/runtime/index.js';
 import { sendToChat } from '../overlay/chat-input.js';
 import { getProviderByUrl } from '../providers/registry.js';
 import { onInterceptedResponse, onStream, onTaskIdle, onToolCall, onAiError } from './intercept/observer.js';

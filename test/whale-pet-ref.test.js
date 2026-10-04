@@ -1,8 +1,8 @@
-
+﻿
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PluginHost } from '../src/plugins/dsh-compat/plugin-host.js';
+import { PluginHost } from '../src/plugins/runtime/plugin-host.js';
 
 describe('参考实现 - 桌宠 UI 插件', () => {
   it('能加载参考实现源码', () => {

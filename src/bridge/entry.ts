@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cuckoo Code preload 入口
  * 原 preload.js 的全部逻辑拆分为本目录下的模块，此处负责组装与初始化，
  * 初始化时序与原文件保持一致。
@@ -210,7 +210,7 @@ function init(): void {
     // 飞书同步：上报用户消息/AI回复/工具状态，并接收飞书来消息
     initFeishuBridge();
 
-    // DSH 兼容层：加载 dsh/*.js 风格插件（异步，不阻塞）
+    // Cuckoo 插件系统：加载 dsh/*.js 风格插件（异步，不阻塞）
     initDshPlugins().catch((err: any) => {
       console.error('[Cuckoo Code] 加载 DSH 插件失败:', err && err.message ? err.message : err);
     });

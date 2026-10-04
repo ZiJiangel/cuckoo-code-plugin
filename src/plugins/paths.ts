@@ -21,7 +21,7 @@ const AGENTS_DIR = 'agents';
 const RULES_DIR = 'rules';
 const MCP_FILE = 'mcp.json';
 const PROVIDERS_DIR = 'providers';
-/** DSH 风格插件目录（第 6 条扩展线：DSH 兼容插件入口） */
+/** 插件入口目录（第 6 条扩展线：可执行插件，写法参考 DSH） */
 const DSH_DIR = 'dsh';
 /** UI 扩展目录（第 7 条扩展线：向界面注入 HTML/JS/CSS） */
 const UI_DIR = 'ui';

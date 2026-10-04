@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 事件桥
+﻿/**
+ * Cuckoo 插件系统 - 事件桥
  *
  * 把 Cuckoo 已有的事件源，转成 DSH 标准事件名派发给插件：
  *   Cuckoo onInterceptedResponse → DSH 'session/event' + 'agent/turn-end'
@@ -38,7 +38,7 @@ function broadcast(event: string, ...args: any[]): void {
       try {
         bus.emit(event, ...args);
       } catch (err) {
-        console.error('[dsh-compat] 派发事件失败 (' + event + '):', err);
+        console.error('[plugin] 派发事件失败 (' + event + '):', err);
       }
     }
   }

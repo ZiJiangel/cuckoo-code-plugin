@@ -1,5 +1,5 @@
-/**
- * DSH 兼容层 - 服务注册表
+﻿/**
+ * Cuckoo 插件系统 - 服务注册表
  *
  * DSH 的 `ctx.provide(name, impl)` / `ctx.inject([names], cb)` 机制：
  *   - 插件可以**提供**服务（如 tools、settings、自定义服务）
@@ -17,7 +17,7 @@ export class ServiceRegistryImpl implements ServiceRegistryInternal {
 
   provide(name: string, impl: any): () => void {
     if (this.services.has(name)) {
-      console.warn('[dsh-compat] 服务重复提供，覆盖旧值: ' + name);
+      console.warn('[plugin] 服务重复提供，覆盖旧值: ' + name);
     }
     this.services.set(name, impl);
     // 触发等待该服务的回调
@@ -25,7 +25,7 @@ export class ServiceRegistryImpl implements ServiceRegistryInternal {
     if (cbs) {
       for (const cb of Array.from(cbs)) {
         try { cb(); } catch (err) {
-          console.error('[dsh-compat] 服务就绪回调出错 (' + name + '):', err);
+          console.error('[plugin] 服务就绪回调出错 (' + name + '):', err);
         }
       }
       this.readyCbs.delete(name);

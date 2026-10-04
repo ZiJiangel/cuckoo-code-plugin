@@ -1,8 +1,8 @@
-
+﻿
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PluginHost } from '../src/plugins/dsh-compat/plugin-host.js';
+import { PluginHost } from '../src/plugins/runtime/plugin-host.js';
 
 describe('服务提供/消费示例', () => {
   it('consumer 等到 provider 的服务就绪', () => {
