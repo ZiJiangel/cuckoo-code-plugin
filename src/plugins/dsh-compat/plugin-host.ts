@@ -45,6 +45,8 @@ export interface PendingPluginSource {
   name: string;
   source: string;
   kind: PluginKind;
+  /** 插件配置（来自 cordis.patch.yml） */
+  config?: any;
 }
 
 /**
@@ -70,7 +72,7 @@ export class PluginHost {
     try {
       const isUi = source.kind === 'ui';
       const plugin = loadPluginSource(
-        source.source, this.host, source.name, undefined, this.registry,
+        source.source, this.host, source.name, source.config, this.registry,
         // UI 插件：在 apply 之前附加 ctx.ui
         isUi ? (ctx) => attachUi(ctx, source.name) : undefined,
       );

@@ -75,7 +75,7 @@ async function fetchSources(kind: 'dsh' | 'ui'): Promise<PendingPluginSource[]> 
   try {
     const res = await api[method]();
     if (!res || !res.success || !Array.isArray(res.plugins)) return [];
-    return res.plugins.map((p: any) => ({ name: p.name, source: p.source, kind }));
+    return res.plugins.map((p: any) => ({ name: p.name, source: p.source, kind, config: p.config }));
   } catch (err: any) {
     console.error('[dsh-plugin] 拉取 ' + kind + ' 插件失败:', err && err.message ? err.message : err);
     return [];

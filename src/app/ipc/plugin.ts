@@ -34,6 +34,22 @@ const { ipcMain, shell } = require('electron');
 /** 传输层单例（无状态，可复用） */
 const httpGet = createElectronHttpGet();
 
+/**
+ * 读取插件根的 cordis.patch.yml 并解析为 config。
+ * DSH 插件用它声明插入项；Cuckoo 把它作为 apply(ctx, config) 的 config 传入。
+ * 找不到文件时返回 undefined（不报错）。
+ */
+function readPatchConfig(pluginDir: string): any {
+  try {
+    const patchFile = path.join(pluginDir, 'cordis.patch.yml');
+    if (!fs.existsSync(patchFile)) return undefined;
+    const text = fs.readFileSync(patchFile, 'utf-8');
+    return { raw: text };
+  } catch {
+    return undefined;
+  }
+}
+
 /** 一次远端清单查询允许的最大条数（防渲染侧传入超大数组打爆请求） */
 const MAX_REMOTE_TARGETS = 200;
 
@@ -174,15 +190,19 @@ function registerPluginIpc(): void {
   // ===== DSH 风格插件：返回已启用插件的 dsh/*.js 源码 =====
   // 渲染进程读不了 fs，由主进程读源码后传给渲染进程执行。
   // 安全：只返回【已启用】插件的文件（与 providers 同级，默认关闭）。
+  // 同时读取插件根的 cordis.patch.yml，解析出 config 一并回传（供 apply(ctx, config)）。
   ipcMain.handle('plugin-dsh-sources', async () => {
     try {
       const files = getEnabledPluginDshFiles();
-      const plugins: Array<{ name: string; source: string; file: string }> = [];
+      const plugins: Array<{ name: string; source: string; file: string; config?: any }> = [];
       for (const file of files) {
         try {
           const source = fs.readFileSync(file, 'utf-8');
           const base = path.basename(file, '.js');
-          plugins.push({ name: base, source, file });
+          // 插件目录 = dsh 的上一级
+          const pluginDir = path.dirname(path.dirname(file));
+          const config = readPatchConfig(pluginDir);
+          plugins.push({ name: base, source, file, config });
         } catch (err: any) {
           console.error('[plugin-dsh] 读取失败:', file, err && err.message);
         }
