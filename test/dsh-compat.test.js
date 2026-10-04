@@ -337,3 +337,37 @@ describe('事件桥 - bindCuckooEvents', () => {
     unregisterContext(ctx);
   });
 });
+
+
+describe('ctx.scope - 子作用域', () => {
+  it('scope 内 effect 独立清理', () => {
+    const ctx = createContext('t', fakeHost());
+    let cleaned = false;
+    const s = ctx.scope();
+    s.effect(() => () => { cleaned = true; });
+    expect(cleaned).toBe(false);
+    s.dispose();
+    expect(cleaned).toBe(true);
+    expect(s.disposed).toBe(true);
+  });
+
+  it('父 dispose 时子 scope 一起销毁', () => {
+    const ctx = createContext('t', fakeHost());
+    let cleaned = false;
+    const s = ctx.scope();
+    s.effect(() => () => { cleaned = true; });
+    ctx.__dispose();
+    expect(cleaned).toBe(true);
+  });
+
+  it('scope 内事件监听 dispose 时移除', () => {
+    const ctx = createContext('t', fakeHost());
+    let count = 0;
+    const s = ctx.scope();
+    s.on('x', () => { count++; });
+    ctx.emit('x');
+    s.dispose();
+    ctx.emit('x');
+    expect(count).toBe(1);
+  });
+});

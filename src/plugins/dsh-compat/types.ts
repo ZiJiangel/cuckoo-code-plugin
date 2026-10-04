@@ -99,6 +99,8 @@ export interface DshContext {
   // ===== 可逆副作用（DSH 核心）=====
   /** 注册一个可逆副作用；返回 disposer。卸载时自动调用。 */
   effect(fn: () => void | (() => void)): () => void;
+  /** 创建子作用域：隔离的 effect 生命周期（对齐 DSH ctx.scope()） */
+  scope(): DshScope;
 
   // ===== 服务提供 / 消费（DSH 核心）=====
   /** 向本上下文注册一个服务（供依赖方注入） */
@@ -115,6 +117,18 @@ export interface DshContext {
     css(text: string): void;
     onResize(cb: (w: number, h: number) => void): () => void;
   };
+}
+
+/** 子作用域：隔离的 effect 生命周期 */
+export interface DshScope {
+  /** 注册副作用（在本作用域内） */
+  effect(fn: () => void | (() => void)): () => void;
+  /** 监听事件（在本作用域内，dispose 时自动移除） */
+  on(event: string, listener: EventListener): () => void;
+  /** 销毁本作用域，清理所有 effect 和监听 */
+  dispose(): void;
+  /** 是否已销毁 */
+  readonly disposed: boolean;
 }
 
 /** 服务注册表（跨插件共享） */

@@ -14,7 +14,7 @@
 import { EventBus } from './events.js';
 import type {
   DshContext, AgentsService, AgentHandle, ToolsService, SessionsService, SettingsService,
-  ServiceRegistry,
+  ServiceRegistry, DshScope,
 } from './types.js';
 
 /** 宿主能力（由 bridge/entry 注入，避免本模块反向依赖上层） */
@@ -118,6 +118,45 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
         console.error('[dsh-compat] effect 执行出错 (' + name + '):', err);
       }
       return () => {};
+    },
+
+    // ===== 子作用域 =====
+    scope() {
+      const scopeDisposers: Array<() => void> = [];
+      let disposed = false;
+      const scope: DshScope = {
+        effect(fn) {
+          if (disposed) return () => {};
+          try {
+            const cleanup = fn();
+            if (typeof cleanup === 'function') {
+              scopeDisposers.push(cleanup);
+              return cleanup;
+            }
+          } catch (err) {
+            console.error('[dsh-compat] scope.effect 出错 (' + name + '):', err);
+          }
+          return () => {};
+        },
+        on(event, listener) {
+          if (disposed) return () => {};
+          const d = bus.on(event, listener);
+          scopeDisposers.push(d);
+          return d;
+        },
+        dispose() {
+          if (disposed) return;
+          disposed = true;
+          for (const d of scopeDisposers) {
+            try { d(); } catch (_) { /* ignore */ }
+          }
+          scopeDisposers.length = 0;
+        },
+        get disposed() { return disposed; },
+      };
+      // 父 dispose 时，子作用域也一起销毁
+      disposers.push(() => scope.dispose());
+      return scope;
     },
 
     // ===== 服务提供 / 消费 =====

@@ -15,7 +15,7 @@
 export type {
   DshPluginFn, DshPluginObject, DshPluginModule, DshContext,
   AgentsService, AgentHandle, ToolsService, SessionsService, SettingsService,
-  ServiceName, EventListener, DispatchMode, LoadResult,
+  ServiceName, EventListener, DispatchMode, LoadResult, DshScope,
 } from './types.js';
 
 export { EventBus } from './events.js';
