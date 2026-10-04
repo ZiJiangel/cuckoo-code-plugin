@@ -25,6 +25,7 @@ import {
 import fs from 'node:fs';
 import path from 'node:path';
 import { invalidateCustomProvidersCache } from '../../providers/custom/loader.js';
+import { parseCordisPatch } from '../../plugins/runtime/patch.js';
 import * as windowState from '../window.js';
 import * as mcpClient from '../../mcp/client.js';
 
@@ -39,12 +40,20 @@ const httpGet = createElectronHttpGet();
  * DSH 插件用它声明插入项；Cuckoo 把它作为 apply(ctx, config) 的 config 传入。
  * 找不到文件时返回 undefined（不报错）。
  */
-function readPatchConfig(pluginDir: string): any {
+function readPatchConfig(pluginDir: string, pluginId?: string): any {
   try {
     const patchFile = path.join(pluginDir, 'cordis.patch.yml');
     if (!fs.existsSync(patchFile)) return undefined;
     const text = fs.readFileSync(patchFile, 'utf-8');
-    return { raw: text };
+    // 用 Cuckoo 的 patch 解析器，提取 insert 的 config
+    const parsed = parseCordisPatch(text);
+    if (!parsed.ok) return undefined;
+    // 优先匹配插件 id/name 的 insert；找不到则用第一个带 config 的
+    const hit = parsed.inserts.find(
+      (i) => (pluginId && (i.id === pluginId || i.name === pluginId)) || (i.config && Object.keys(i.config).length > 0),
+    );
+    if (hit && hit.config) return hit.config;
+    return undefined;
   } catch {
     return undefined;
   }
@@ -210,7 +219,7 @@ function registerPluginIpc(): void {
           const base = path.basename(file, '.js');
           // 插件目录 = dsh 的上一级
           const pluginDir = path.dirname(path.dirname(file));
-          const config = readPatchConfig(pluginDir);
+          const config = readPatchConfig(pluginDir, base);
           plugins.push({ name: base, source, file, config });
         } catch (err: any) {
           console.error('[plugin-dsh] 读取失败:', file, err && err.message);

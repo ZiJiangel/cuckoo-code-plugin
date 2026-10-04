@@ -8,6 +8,7 @@ import { loadPluginModule, safeLoad } from '../src/plugins/runtime/loader.js';
 import { ServiceRegistryImpl } from '../src/plugins/runtime/service-registry.js';
 import { Service } from '../src/plugins/runtime/service.js';
 import { esmToCjs } from '../src/plugins/runtime/loader.js';
+import { parseCordisPatch } from '../src/plugins/runtime/patch.js';
 import { PluginHost, diagnose } from '../src/plugins/runtime/plugin-host.js';
 import { registerContext, unregisterContext, bindCuckooEvents } from '../src/plugins/runtime/bridge.js';
 
@@ -625,5 +626,34 @@ describe('T9 对象形式插件', () => {
     };
     const p = loadPluginModule(mod, host);
     expect(p.name).toBe('obj-plugin');
+  });
+});
+
+
+describe('T7/T8 插件 config（来自 cordis.patch.yml）', () => {
+  it('parseCordisPatch 解析 config 字段', () => {
+    const yml = `- insert:
+    - id: my-plugin
+      name: my-plugin
+      config:
+        greeting: hello
+        count: 3
+`;
+    const r = parseCordisPatch(yml);
+    expect(r.ok).toBe(true);
+    expect(r.inserts[0].config.greeting).toBe('hello');
+    expect(r.inserts[0].config.count).toBe(3);
+  });
+
+  it('config 传给 apply(ctx, config)', () => {
+    const cfg = { greeting: 'hi' };
+    let got = null;
+    const mod = { name: 'cfg-plugin', apply: (ctx, c) => { got = c; } };
+    const host = {
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => null,
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    };
+    loadPluginModule(mod, host, cfg);
+    expect(got).toEqual(cfg);
   });
 });
