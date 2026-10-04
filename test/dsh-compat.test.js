@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { EventBus } from '../src/plugins/dsh-compat/events.js';
 import { createContext } from '../src/plugins/dsh-compat/context.js';
 import { loadPluginModule, safeLoad } from '../src/plugins/dsh-compat/loader.js';
+import { ServiceRegistryImpl } from '../src/plugins/dsh-compat/service-registry.js';
 
 /** 一个假的宿主能力 */
 function fakeHost() {
@@ -196,5 +197,40 @@ describe('hasPatchDeclared', () => {
     expect(hasPatchDeclared({ dsh: { bundle: { patch: './cordis.patch.yml' } } })).toBe(true);
     expect(hasPatchDeclared({ dsh: {} })).toBe(false);
     expect(hasPatchDeclared({})).toBe(false);
+  });
+});
+
+
+describe('ctx.effect - 可逆副作用', () => {
+  it('卸载时自动执行 cleanup', () => {
+    let cleaned = false;
+    const ctx = createContext('t', fakeHost());
+    ctx.effect(() => () => { cleaned = true; });
+    ctx.__dispose();
+    expect(cleaned).toBe(true);
+  });
+
+  it('无返回值时安全', () => {
+    const ctx = createContext('t', fakeHost());
+    expect(() => ctx.effect(() => {})).not.toThrow();
+  });
+});
+
+describe('ctx.provide/get/inject - 服务', () => {
+  it('provide 后 get 可取到', () => {
+    const ctx = createContext('t', fakeHost());
+    ctx.provide('my-service', { hello: () => 'hi' });
+    expect(ctx.get('my-service').hello()).toBe('hi');
+  });
+
+  it('inject 在服务就绪时回调', () => {
+    const reg = new ServiceRegistryImpl();
+    const ctxA = createContext('a', fakeHost(), reg);
+    const ctxB = createContext('b', fakeHost(), reg);
+    let ready = false;
+    ctxB.inject(['shared'], () => { ready = true; });
+    expect(ready).toBe(false);
+    ctxA.provide('shared', { x: 1 });
+    expect(ready).toBe(true);
   });
 });

@@ -14,6 +14,7 @@
 import { EventBus } from './events.js';
 import type {
   DshContext, AgentsService, AgentHandle, ToolsService, SessionsService, SettingsService,
+  ServiceRegistry,
 } from './types.js';
 
 /** 宿主能力（由 bridge/entry 注入，避免本模块反向依赖上层） */
@@ -38,7 +39,7 @@ export interface HostCapabilities {
 /**
  * 创建一个 DSH 上下文的工厂
  */
-function createContext(name: string, host: HostCapabilities): DshContext {
+function createContext(name: string, host: HostCapabilities, registry?: ServiceRegistry): DshContext {
   const bus = new EventBus();
   const disposers: Array<() => void> = [];
 
@@ -104,6 +105,53 @@ function createContext(name: string, host: HostCapabilities): DshContext {
     serial: (event, ...args) => bus.serial(event, ...args),
     bail: (event, ...args) => bus.bail(event, ...args),
     waterfall: (event, value, ...args) => bus.waterfall(event, value, ...args),
+
+    // ===== 可逆副作用 =====
+    effect(fn) {
+      try {
+        const cleanup = fn();
+        if (typeof cleanup === 'function') {
+          disposers.push(cleanup);
+          return cleanup;
+        }
+      } catch (err) {
+        console.error('[dsh-compat] effect 执行出错 (' + name + '):', err);
+      }
+      return () => {};
+    },
+
+    // ===== 服务提供 / 消费 =====
+    provide(svcName, impl) {
+      if (!registry) {
+        // 无注册表时退化为本上下文私有
+        (ctx as any).__local = (ctx as any).__local || {};
+        (ctx as any).__local[svcName] = impl;
+        return () => { delete (ctx as any).__local[svcName]; };
+      }
+      return registry.provide(svcName, impl);
+    },
+    get(svcName) {
+      if (registry && registry.has(svcName)) return registry.get(svcName);
+      const local = (ctx as any).__local;
+      return local ? local[svcName] : undefined;
+    },
+    inject(names, callback) {
+      if (!registry) { callback(); return () => {}; }
+      const cleanups: Array<() => void> = [];
+      let fired = false;
+      for (const n of names) {
+        cleanups.push(registry.onReady(n, () => {
+          if (fired) return;
+          fired = true;
+          try { callback(); } catch (err) {
+            console.error('[dsh-compat] inject 回调出错 (' + name + '):', err);
+          }
+        }));
+      }
+      const d = () => { for (const c of cleanups) { try { c(); } catch (_) {} } };
+      disposers.push(d);
+      return d;
+    },
   };
 
   // 暴露内部 bus 与清理器（供 loader 使用）

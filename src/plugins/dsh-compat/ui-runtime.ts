@@ -17,6 +17,7 @@
  * 这样桌宠这类 UI 插件就能：用 ctx.on(...) 感知 agent 状态 + 用 ctx.ui.mount 画界面。
  */
 import { loadPluginSource, safeLoad } from './loader.js';
+import { serviceRegistry } from './service-registry.js';
 import type { LoadedPlugin } from './loader.js';
 import type { HostCapabilities } from './context.js';
 import { registerContext, unregisterContext, bindCuckooEvents } from './bridge.js';
@@ -105,7 +106,7 @@ export function loadUiPlugins(plugins: PendingUiPlugin[], host: HostCapabilities
   const failures: Array<{ name: string; error: string }> = [];
 
   for (const p of plugins) {
-    const result = safeLoad(() => loadPluginSource(p.source, host, p.name));
+    const result = safeLoad(() => loadPluginSource(p.source, host, p.name, undefined, serviceRegistry));
     if (result.ok && result.plugin) {
       attachUi(result.plugin.ctx, result.plugin.name);
       loaded.push(result.plugin);

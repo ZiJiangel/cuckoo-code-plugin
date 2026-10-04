@@ -95,6 +95,26 @@ export interface DshContext {
   serial(event: string, ...args: any[]): Promise<any>;
   bail(event: string, ...args: any[]): any;
   waterfall(event: string, ...args: any[]): Promise<any>;
+
+  // ===== 可逆副作用（DSH 核心）=====
+  /** 注册一个可逆副作用；返回 disposer。卸载时自动调用。 */
+  effect(fn: () => void | (() => void)): () => void;
+
+  // ===== 服务提供 / 消费（DSH 核心）=====
+  /** 向本上下文注册一个服务（供依赖方注入） */
+  provide(name: string, impl: any): () => void;
+  /** 取一个服务（自己 provide 的，或注入的） */
+  get(name: string): any;
+  /** 声明依赖某服务：就绪时回调，返回 disposer */
+  inject(names: string[], callback: () => void): () => void;
+}
+
+/** 服务注册表（跨插件共享） */
+export interface ServiceRegistry {
+  provide(name: string, impl: any): () => void;
+  get(name: string): any;
+  has(name: string): boolean;
+  onReady(name: string, cb: () => void): () => void;
 }
 
 /** 加载结果 */

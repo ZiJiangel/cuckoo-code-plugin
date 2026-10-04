@@ -16,7 +16,7 @@
  */
 import { createContext } from './context.js';
 import type { HostCapabilities } from './context.js';
-import type { DshContext, DshPluginModule, ServiceName, LoadResult } from './types.js';
+import type { DshContext, DshPluginModule, ServiceName, LoadResult, ServiceRegistry } from './types.js';
 
 /** 已加载的插件句柄 */
 export interface LoadedPlugin {
@@ -72,11 +72,11 @@ function checkInject(host: HostCapabilities, inject: ServiceName[]): void {
 /**
  * 加载一个 DSH 风格插件模块
  */
-export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, config?: any): LoadedPlugin {
+export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, config?: any, registry?: ServiceRegistry): LoadedPlugin {
   const { name, inject, apply } = resolveEntry(mod);
   checkInject(host, inject);
 
-  const ctx = createContext(name, host);
+  const ctx = createContext(name, host, registry);
 
   // 激活（apply 可能是 async，但我们同步返回句柄；错误在内部捕获）
   try {
@@ -144,7 +144,7 @@ export function esmToCjs(source: string): string {
  * 注意：会执行任意代码，调用方须确保来源可信。
  * 支持 ESM 与 CommonJS 两种写法。
  */
-export function loadPluginSource(source: string, host: HostCapabilities, fallbackName?: string, config?: any): LoadedPlugin {
+export function loadPluginSource(source: string, host: HostCapabilities, fallbackName?: string, config?: any, registry?: ServiceRegistry): LoadedPlugin {
   const isEsm = /(^|\n)\s*export\s/.test(source);
   const code = isEsm ? esmToCjs(source) : source;
   // 用 Function 包装成 CommonJS 模块环境
@@ -155,7 +155,7 @@ export function loadPluginSource(source: string, host: HostCapabilities, fallbac
     throw new Error('DSH 插件暂不支持 require 外部模块: ' + id);
   });
   const mod = (result && (typeof result === 'object' || typeof result === 'function')) ? result : moduleObj.exports;
-  return loadPluginModule(mod, host, config);
+  return loadPluginModule(mod, host, config, registry);
 }
 
 /**

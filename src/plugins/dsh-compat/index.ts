@@ -41,3 +41,6 @@ export type { PendingUiPlugin } from './ui-runtime.js';
 
 export { parseCordisPatch, hasPatchDeclared } from './patch.js';
 export type { PatchInsert, PatchParseResult } from './patch.js';
+
+export { ServiceRegistryImpl, serviceRegistry } from './service-registry.js';
+export type { ServiceRegistryInternal } from './service-registry.js';

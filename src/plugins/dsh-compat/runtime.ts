@@ -10,6 +10,7 @@
  *   4. 注册到活跃上下文，绑定 Cuckoo 事件桥
  */
 import { loadPluginSource, safeLoad } from './loader.js';
+import { serviceRegistry } from './service-registry.js';
 import type { LoadedPlugin } from './loader.js';
 import type { HostCapabilities } from './context.js';
 import { registerContext, unregisterContext, bindCuckooEvents } from './bridge.js';
@@ -36,7 +37,7 @@ export function loadDshPlugins(plugins: PendingPlugin[], host: HostCapabilities,
   const failures: Array<{ name: string; error: string }> = [];
 
   for (const p of plugins) {
-    const result = safeLoad(() => loadPluginSource(p.source, host, p.name));
+    const result = safeLoad(() => loadPluginSource(p.source, host, p.name, undefined, serviceRegistry));
     if (result.ok && result.plugin) {
       loaded.push(result.plugin);
       registerContext(result.plugin.ctx);
