@@ -438,3 +438,31 @@ describe('diagnose - 可操作错误诊断', () => {
     expect(d).toMatch(/ui 插件加载失败/);
   });
 });
+
+
+describe('ctx.assets + ctx.ui.injectScript（UI 插件资源能力）', () => {
+  it('UI 插件拿到 ctx.assets 和 injectScript', () => {
+    // 模拟 DOM
+    global.document = {
+      createElement: () => ({ id: '', style: {}, setAttribute: () => {}, appendChild: () => {}, isConnected: true, textContent: '', src: '' }),
+      getElementById: () => null,
+      body: { appendChild: () => {} },
+      head: { appendChild: () => {} },
+    };
+    global.window = { addEventListener: () => {}, removeEventListener: () => {}, innerWidth: 800, innerHeight: 600 };
+    global.Blob = class {};
+    global.URL = { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} };
+    global.atob = (s) => Buffer.from(s, 'base64').toString('binary');
+
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ui-assets', kind: 'ui', source: `export const name = 'ui-assets'; export function apply(ctx) {}` });
+    const c = host.getContext('ui-assets');
+    expect(typeof c.ui.injectScript).toBe('function');
+    expect(typeof c.ui.injectScriptSrc).toBe('function');
+    expect(typeof c.assets.read).toBe('function');
+    expect(typeof c.assets.url).toBe('function');
+  });
+});

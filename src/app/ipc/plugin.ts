@@ -242,6 +242,34 @@ function registerPluginIpc(): void {
     }
   });
 
+  // ===== 读插件资源文件（供 UI 插件加载模型/图片等）=====
+  // 安全：只允许读【已启用插件】目录下的文件，且防路径穿越。
+  ipcMain.handle('plugin-read-asset', async (_event: any, { pluginId, relPath }: any = {}) => {
+    try {
+      if (typeof pluginId !== 'string' || !pluginId) return { success: false, error: '缺少 pluginId' };
+      if (typeof relPath !== 'string' || !relPath) return { success: false, error: '缺少 relPath' };
+      // 找已安装插件目录
+      const plugins = listInstalledPlugins();
+      const target = plugins.find((p: any) => p.manifest && p.manifest.id === pluginId);
+      if (!target) return { success: false, error: '插件不存在: ' + pluginId };
+      if (!isPluginEnabled(pluginId)) return { success: false, error: '插件未启用: ' + pluginId };
+      const root = target.dir;
+      // 防路径穿越
+      const abs = path.resolve(root, relPath);
+      const prefix = root.endsWith(path.sep) ? root : root + path.sep;
+      if (abs !== root && !abs.startsWith(prefix)) {
+        return { success: false, error: '路径越界' };
+      }
+      if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+        return { success: false, error: '文件不存在: ' + relPath };
+      }
+      const buf = fs.readFileSync(abs);
+      return { success: true, base64: buf.toString('base64'), size: buf.length };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
   // ===== 在文件管理器中打开插件目录（便于手工检查）=====
   ipcMain.handle('plugin-open-dir', async () => {
     try {

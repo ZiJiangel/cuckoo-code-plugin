@@ -110,12 +110,19 @@ export interface DshContext {
   /** 声明依赖某服务：就绪时回调，返回 disposer */
   inject(names: string[], callback: () => void): () => void;
 
-  /** UI 能力（仅 UI 插件有）：挂载 DOM、注入样式 */
+  /** UI 能力（仅 UI 插件有）：挂载 DOM、注入样式/脚本 */
   ui?: {
     mount(el: any): void;
     root(): any;
     css(text: string): void;
     onResize(cb: (w: number, h: number) => void): () => void;
+    injectScript(text: string): void;
+    injectScriptSrc(src: string): void;
+  };
+  /** 插件资源访问（仅 UI 插件有）：读插件目录文件 / blob URL */
+  assets?: {
+    read(relPath: string): Promise<Uint8Array>;
+    url(relPath: string): Promise<string>;
   };
 }
 

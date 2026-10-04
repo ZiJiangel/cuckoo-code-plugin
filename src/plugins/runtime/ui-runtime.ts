@@ -42,6 +42,18 @@ interface UiFacade {
   root(): any;
   css(text: string): void;
   onResize(cb: (w: number, h: number) => void): () => void;
+  /** 注入内联脚本（等价于 DSH 的 script 行） */
+  injectScript(text: string): void;
+  /** 注入 <script src>（等价于 DSH 的 script-src 行） */
+  injectScriptSrc(src: string): void;
+}
+
+/** 插件资源访问（等价于 DSH webServer 静态资源，Electron 用 IPC 实现） */
+interface AssetsFacade {
+  /** 读插件目录下的文件 → Uint8Array */
+  read(relPath: string): Promise<Uint8Array>;
+  /** 取 blob URL（缓存），适合 <img src>/Live2D 加载 */
+  url(relPath: string): Promise<string>;
 }
 
 /** 给某个 ctx 扩展 UI 能力 */
@@ -85,9 +97,50 @@ function attachUi(ctx: any, pluginName: string): void {
       window.addEventListener('resize', handler);
       return () => window.removeEventListener('resize', handler);
     },
+    injectScript(text: string) {
+      if (typeof text !== 'string' || !text) return;
+      const s = document.createElement('script');
+      s.setAttribute('data-plugin', pluginName);
+      s.textContent = text;
+      document.head.appendChild(s);
+    },
+    injectScriptSrc(src: string) {
+      if (typeof src !== 'string' || !src) return;
+      const s = document.createElement('script');
+      s.setAttribute('data-plugin', pluginName);
+      s.src = src;
+      document.head.appendChild(s);
+    },
+  };
+
+  // ===== 插件资源访问（ctx.assets）=====
+  const blobUrls: string[] = [];
+  const assets: AssetsFacade = {
+    async read(relPath: string): Promise<Uint8Array> {
+      const api = (window as any).electronAPI;
+      if (!api || typeof api.readPluginAsset !== 'function') {
+        throw new Error('readPluginAsset 不可用');
+      }
+      const res = await api.readPluginAsset(pluginName, relPath);
+      if (!res || !res.success) throw new Error((res && res.error) || '读取资源失败');
+      // base64 → Uint8Array
+      const bin = atob(res.base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    },
+    async url(relPath: string): Promise<string> {
+      const bytes = await assets.read(relPath);
+      // 用底层 ArrayBuffer 构造，避免 Uint8Array 泛型与 BlobPart 的兼容问题
+      const blob = new Blob([bytes.buffer as ArrayBuffer]);
+      const u = URL.createObjectURL(blob);
+      blobUrls.push(u);
+      return u;
+    },
   };
 
   ctx.ui = ui;
+  ctx.assets = assets;
   // 记录清理器：卸载时移除根容器
   const disposers: Array<() => void> = (ctx as any).__disposers || [];
   disposers.push(() => {
@@ -95,6 +148,11 @@ function attachUi(ctx: any, pluginName: string): void {
       const el = document.getElementById(rootId);
       if (el && el.parentNode) el.parentNode.removeChild(el);
     } catch (_) { /* ignore */ }
+    // 释放 blob URL
+    for (const u of blobUrls) {
+      try { URL.revokeObjectURL(u); } catch (_) {}
+    }
+    blobUrls.length = 0;
   });
 }
 

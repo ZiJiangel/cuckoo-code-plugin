@@ -57,6 +57,10 @@ let electronAPI: any = {
   getUiPluginSources: () => {
     return ipcRenderer.invoke('plugin-ui-sources');
   },
+  /** 读插件资源文件（返回 base64） */
+  readPluginAsset: (pluginId: string, relPath: string) => {
+    return ipcRenderer.invoke('plugin-read-asset', { pluginId, relPath });
+  },
   /** 监听"插件需要重载"通知 */
   onPluginReloadNeeded: (cb: () => void) => {
     const handler = () => { try { cb(); } catch (_) {} };
