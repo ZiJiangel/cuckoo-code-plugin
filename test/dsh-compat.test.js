@@ -144,3 +144,57 @@ describe('loadPluginModule - 入口契约', () => {
     expect(r.ok).toBe(false);
   });
 });
+
+import { describe, it, expect } from 'vitest';
+import { parseCordisPatch, hasPatchDeclared } from '../src/plugins/dsh-compat/patch.js';
+
+describe('parseCordisPatch', () => {
+  it('解析单个 insert', () => {
+    const yml = `- insert:
+    - id: dsh-market
+      name: 'dshmarket'
+`;
+    const r = parseCordisPatch(yml);
+    expect(r.ok).toBe(true);
+    expect(r.inserts.length).toBe(1);
+    expect(r.inserts[0].id).toBe('dsh-market');
+    expect(r.inserts[0].name).toBe('dshmarket');
+  });
+
+  it('解析多个 insert + config', () => {
+    const yml = `- insert:
+    - id: a
+      name: 'pkg-a'
+      config:
+        foo: 1
+        bar: true
+    - id: b
+      name: 'pkg-b'
+`;
+    const r = parseCordisPatch(yml);
+    expect(r.inserts.length).toBe(2);
+    expect(r.inserts[0].id).toBe('a');
+    expect(r.inserts[0].config.foo).toBe(1);
+    expect(r.inserts[0].config.bar).toBe(true);
+    expect(r.inserts[1].id).toBe('b');
+  });
+
+  it('空输入', () => {
+    const r = parseCordisPatch('');
+    expect(r.ok).toBe(true);
+    expect(r.inserts.length).toBe(0);
+  });
+
+  it('非字符串报错', () => {
+    const r = parseCordisPatch(null);
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe('hasPatchDeclared', () => {
+  it('识别 dsh.bundle.patch', () => {
+    expect(hasPatchDeclared({ dsh: { bundle: { patch: './cordis.patch.yml' } } })).toBe(true);
+    expect(hasPatchDeclared({ dsh: {} })).toBe(false);
+    expect(hasPatchDeclared({})).toBe(false);
+  });
+});

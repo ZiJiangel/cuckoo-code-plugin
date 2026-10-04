@@ -38,3 +38,6 @@ export type { PendingPlugin } from './runtime.js';
 
 export { loadUiPlugins, unloadAllUiPlugins } from './ui-runtime.js';
 export type { PendingUiPlugin } from './ui-runtime.js';
+
+export { parseCordisPatch, hasPatchDeclared } from './patch.js';
+export type { PatchInsert, PatchParseResult } from './patch.js';
