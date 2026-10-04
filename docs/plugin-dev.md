@@ -157,3 +157,85 @@ export function apply(ctx) {
 
 - `providers/`、`dsh/`、`ui/` 是**可执行内容**，默认**不启用**，需用户显式授权
 - 插件启用后才会加载（`plugins-state.json` 的 `enabled`）
+
+
+## 十、进阶能力
+
+### 10.1 子作用域 ctx.scope()
+
+用于**隔离的生命周期管理**——插件内部按模块划分，各自独立清理：
+
+```js
+export function apply(ctx) {
+  // 主作用域：插件卸载时清理
+  ctx.effect(() => () => console.log('主清理'))
+
+  // 子作用域：可独立 dispose
+  const s = ctx.scope()
+  s.effect(() => () => console.log('子清理'))
+  s.on('session/event', () => {})
+
+  // 只清理子作用域（主作用域不受影响）
+  // s.dispose()
+
+  // 插件卸载时，子作用域也会一起清理
+}
+```
+
+### 10.2 依赖等待（inject）
+
+`inject` 声明的服务**未就绪时，apply 会被推迟**，直到服务就绪：
+
+```js
+export const name = 'consumer'
+export const inject = ['greeter']   // 依赖 greeter 服务
+
+export function apply(ctx) {
+  // 走到这里，greeter 一定已就绪
+  const greeter = ctx.get('greeter')
+  greeter.greet('你好')
+}
+```
+
+**注意**：DSH 允许 inject **任意**服务名（只要有人 `ctx.provide`）。
+内置服务（agents/tools/sessions/settings）只是"必定存在"的常用服务。
+
+### 10.3 提供服务
+
+```js
+export function apply(ctx) {
+  ctx.provide('my-service', {
+    doSomething: () => {},
+  })
+  // 插件卸载时自动注销
+}
+```
+
+### 10.4 错误诊断
+
+插件加载失败时，Cuckoo 会把错误翻译成**可操作的提示**，例如：
+- `[ESM 语法错误]` → 检查是否用了 ESM 命名导出
+- `[缺入口]` → 是否导出了 `apply(ctx, config)`
+- `[导出方式错误]` → 不要用 `export default`
+
+## 十一、脚手架
+
+用 CLI 快速生成插件骨架：
+
+```bash
+node scripts/create-plugin.mjs my-plugin
+# → 生成 my-plugin/（含 plugin.json + dsh/ + ui/ + README）
+```
+
+## 十二、调试
+
+Cuckoo 运行后，浏览器控制台有 `window.CuckooPlugins`：
+
+```js
+CuckooPlugins.list()              // 已加载插件名
+CuckooPlugins.listByKind('ui')    // 按类型
+CuckooPlugins.stats()             // { total, dsh, ui, failed }
+CuckooPlugins.context('my-plugin')// 取插件上下文
+CuckooPlugins.failures()          // 加载失败记录
+CuckooPlugins.broadcast('my-event', data)  // 广播事件
+```
