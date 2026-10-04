@@ -51,7 +51,7 @@ let electronAPI: any = {
   },
   /** 拉取已启用插件的 DSH 风格插件源码 */
   getDshPluginSources: () => {
-    return ipcRenderer.invoke('plugin-dsh-sources');
+    return ipcRenderer.invoke('plugin-sources');
   },
   /** 拉取已启用插件的 UI 扩展源码 */
   getUiPluginSources: () => {

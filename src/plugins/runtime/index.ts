@@ -32,7 +32,7 @@ export {
 export type { CuckooEventSource } from './bridge.js';
 
 export {
-  loadDshPlugins, unloadAllDshPlugins, getLoadedDshPluginNames,
+  loadPlugins, unloadAllPlugins, getLoadedPluginNames,
 } from './runtime.js';
 export type { PendingPlugin } from './runtime.js';
 

@@ -22,7 +22,7 @@ import { startSessionWatcher, startWatchdog, checkSessionChange } from './loop/w
 import { initSubagentIfNeeded } from './subagent.js';
 import { initHarnessBridge } from './harness-bridge.js';
 import { initFeishuBridge } from './feishu-bridge.js';
-import { initDshPlugins, bindPluginReload } from './dsh-plugins.js';
+import { initPlugins, bindPluginReload } from './plugin-system.js';
 
 const require = createRequire(import.meta.url);
 const { webFrame, ipcRenderer } = require('electron');
@@ -211,7 +211,7 @@ function init(): void {
     initFeishuBridge();
 
     // Cuckoo 插件系统：加载 dsh/*.js 风格插件（异步，不阻塞）
-    initDshPlugins().catch((err: any) => {
+    initPlugins().catch((err: any) => {
       console.error('[Cuckoo Code] 加载 DSH 插件失败:', err && err.message ? err.message : err);
     });
     // 监听插件热重载通知（启用/禁用插件时主进程推送）

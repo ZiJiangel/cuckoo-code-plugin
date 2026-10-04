@@ -79,7 +79,7 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
 
   const ctx: DshContext = {
     name,
-    log: (...args: any[]) => console.log('[' + (host.logPrefix || 'dsh-plugin') + ':' + name + ']', ...args),
+    log: (...args: any[]) => console.log('[' + (host.logPrefix || 'plugin') + ':' + name + ']', ...args),
 
     agents,
     tools,

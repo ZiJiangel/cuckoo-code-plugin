@@ -200,7 +200,7 @@ function registerPluginIpc(): void {
   // 渲染进程读不了 fs，由主进程读源码后传给渲染进程执行。
   // 安全：只返回【已启用】插件的文件（与 providers 同级，默认关闭）。
   // 同时读取插件根的 cordis.patch.yml，解析出 config 一并回传（供 apply(ctx, config)）。
-  ipcMain.handle('plugin-dsh-sources', async () => {
+  ipcMain.handle('plugin-sources', async () => {
     try {
       const files = getEnabledPluginDshFiles();
       const plugins: Array<{ name: string; source: string; file: string; config?: any }> = [];

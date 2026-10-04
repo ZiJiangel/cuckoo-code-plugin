@@ -32,7 +32,7 @@ export interface PendingPlugin {
  * @param host 宿主能力
  * @param eventSource Cuckoo 事件源（用于事件桥，只需绑定一次）
  */
-export function loadDshPlugins(plugins: PendingPlugin[], host: HostCapabilities, eventSource?: CuckooEventSource): { loaded: string[]; failed: Array<{ name: string; error: string }> } {
+export function loadPlugins(plugins: PendingPlugin[], host: HostCapabilities, eventSource?: CuckooEventSource): { loaded: string[]; failed: Array<{ name: string; error: string }> } {
   const okNames: string[] = [];
   const failures: Array<{ name: string; error: string }> = [];
 
@@ -57,7 +57,7 @@ export function loadDshPlugins(plugins: PendingPlugin[], host: HostCapabilities,
 }
 
 /** 卸载所有已加载的 DSH 插件 */
-export function unloadAllDshPlugins(): void {
+export function unloadAllPlugins(): void {
   for (const p of loaded) {
     try {
       unregisterContext(p.ctx);
@@ -74,7 +74,7 @@ export function unloadAllDshPlugins(): void {
 }
 
 /** 取已加载插件名列表 */
-export function getLoadedDshPluginNames(): string[] {
+export function getLoadedPluginNames(): string[] {
   return loaded.map((p) => p.name);
 }
 
