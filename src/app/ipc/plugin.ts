@@ -242,6 +242,32 @@ function registerPluginIpc(): void {
     }
   });
 
+  // ===== 插件工具注册（渲染进程 → 主进程）=====
+  // 插件注册的工具，执行时会反向 IPC 回渲染进程执行。
+  ipcMain.handle('plugin-tool-register', async (event: any, info: any = {}) => {
+    try {
+      const { registerPluginToolFromRenderer } = await import('../plugin-tools.js');
+      return registerPluginToolFromRenderer(event.sender, info);
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle('plugin-tool-unregister', async (_event: any, { toolId }: any = {}) => {
+    try {
+      const { unregisterPluginTool } = await import('../plugin-tools.js');
+      unregisterPluginTool(toolId);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.on('plugin-tool-result', (_event: any, { callId, result }: any = {}) => {
+    const { resolvePendingToolCall } = require('../plugin-tools.js');
+    resolvePendingToolCall(callId, result);
+  });
+
   // ===== 读插件资源文件（供 UI 插件加载模型/图片等）=====
   // 安全：只允许读【已启用插件】目录下的文件，且防路径穿越。
   ipcMain.handle('plugin-read-asset', async (_event: any, { pluginId, relPath }: any = {}) => {

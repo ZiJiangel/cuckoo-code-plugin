@@ -57,6 +57,24 @@ let electronAPI: any = {
   getUiPluginSources: () => {
     return ipcRenderer.invoke('plugin-ui-sources');
   },
+  /** 注册插件工具到主进程 */
+  registerPluginTool: (info: any) => {
+    return ipcRenderer.invoke('plugin-tool-register', info);
+  },
+  /** 注销插件工具 */
+  unregisterPluginTool: (toolId: string) => {
+    return ipcRenderer.invoke('plugin-tool-unregister', { toolId });
+  },
+  /** 监听"主进程调用插件工具" */
+  onPluginToolInvoke: (cb: (payload: any) => void) => {
+    const handler = (_e: any, payload: any) => { try { cb(payload); } catch (_) {} };
+    ipcRenderer.on('plugin-tool-invoke', handler);
+    return () => ipcRenderer.removeListener('plugin-tool-invoke', handler);
+  },
+  /** 回传插件工具执行结果 */
+  pluginToolResult: (callId: string, result: any) => {
+    return ipcRenderer.send('plugin-tool-result', { callId, result });
+  },
   /** 读插件资源文件（返回 base64） */
   readPluginAsset: (pluginId: string, relPath: string) => {
     return ipcRenderer.invoke('plugin-read-asset', { pluginId, relPath });

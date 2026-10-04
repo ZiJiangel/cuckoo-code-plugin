@@ -47,6 +47,9 @@ function buildHost(): HostCapabilities {
       }
     },
     listTools: () => ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'pwsh', 'webFetch'],
+    registerPluginTool: (pluginName: string, tool: any) => {
+      return registerPluginTool(pluginName, tool);
+    },
     getSetting: (key: string) => {
       try { const v = localStorage.getItem(key); return v === null ? undefined : v; } catch (_) { return undefined; }
     },
@@ -54,6 +57,61 @@ function buildHost(): HostCapabilities {
       try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); } catch (_) { /* ignore */ }
     },
     logPrefix: 'plugin',
+  };
+}
+
+/** 已注册的插件工具（toolId → execute） */
+const pluginTools = new Map<string, (args: any) => any>();
+let toolListenerBound = false;
+
+/** 绑定"主进程调用插件工具"的监听（只绑一次） */
+function bindToolInvokeListener(): void {
+  if (toolListenerBound) return;
+  toolListenerBound = true;
+  const api = (window as any).electronAPI;
+  if (!api || typeof api.onPluginToolInvoke !== 'function') return;
+  api.onPluginToolInvoke((payload: any) => {
+    const { toolId, args, callId } = payload || {};
+    const fn = pluginTools.get(toolId);
+    if (!fn) {
+      api.pluginToolResult(callId, { success: false, error: '工具未注册: ' + toolId });
+      return;
+    }
+    Promise.resolve()
+      .then(() => fn(args))
+      .then((result) => api.pluginToolResult(callId, { success: true, result }))
+      .catch((err) => api.pluginToolResult(callId, { success: false, error: err && err.message ? err.message : String(err) }));
+  });
+}
+
+/**
+ * 注册一个插件工具（渲染进程侧）：
+ *   1. 生成 toolId，记下 execute
+ *   2. 通知主进程注册（带 schema）
+ *   3. 主进程调用时，通过 plugin-tool-invoke 回调执行
+ */
+function registerPluginTool(pluginName: string, tool: any): () => void {
+  const api = (window as any).electronAPI;
+  if (!api || typeof api.registerPluginTool !== 'function') {
+    console.warn('[plugin] registerPluginTool 不可用，工具未注册: ' + tool.name);
+    return () => {};
+  }
+  bindToolInvokeListener();
+  const toolId = pluginName + '::' + tool.name;
+  pluginTools.set(toolId, tool.execute);
+  api.registerPluginTool({
+    toolId,
+    pluginName,
+    name: tool.name,
+    description: tool.description || '',
+    parameters: tool.parameters || { type: 'object', properties: {} },
+    jsApi: tool.jsApi || null,
+  }).catch(() => {});
+  return () => {
+    pluginTools.delete(toolId);
+    if (typeof api.unregisterPluginTool === 'function') {
+      api.unregisterPluginTool(toolId).catch(() => {});
+    }
   };
 }
 

@@ -14,7 +14,7 @@
 import { EventBus } from './events.js';
 import type {
   DshContext, AgentsService, AgentHandle, ToolsService, SessionsService, SettingsService,
-  ServiceRegistry, DshScope,
+  ServiceRegistry, DshScope, PluginToolDefinition,
 } from './types.js';
 
 /** 宿主能力（由 bridge/entry 注入，避免本模块反向依赖上层） */
@@ -29,6 +29,8 @@ export interface HostCapabilities {
   listSessions(): Array<{ id: string; title?: string }>;
   /** 列出工具名 */
   listTools(): string[];
+  /** 注册插件工具到主进程（返回注销函数） */
+  registerPluginTool?(pluginName: string, tool: PluginToolDefinition): () => void;
   /** 读 localStorage 配置 */
   getSetting(key: string): any;
   setSetting(key: string, value: any): void;
@@ -63,6 +65,18 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
   // ===== 服务：tools =====
   const tools: ToolsService = {
     list: () => host.listTools(),
+    register(tool: PluginToolDefinition): () => void {
+      if (!tool || typeof tool.name !== 'string' || !tool.name) {
+        throw new Error('工具必须有 name');
+      }
+      if (typeof tool.execute !== 'function') {
+        throw new Error('工具必须有 execute 函数');
+      }
+      if (host.registerPluginTool) {
+        return host.registerPluginTool(name, tool);
+      }
+      return () => {};
+    },
   };
 
   // ===== 服务：sessions =====

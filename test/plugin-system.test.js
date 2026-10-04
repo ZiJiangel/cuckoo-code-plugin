@@ -466,3 +466,38 @@ describe('ctx.assets + ctx.ui.injectScript（UI 插件资源能力）', () => {
     expect(typeof c.assets.url).toBe('function');
   });
 });
+
+
+describe('ctx.tools.register（插件注册工具）', () => {
+  it('注册接口存在且记录工具', () => {
+    const registered = [];
+    const host = {
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [],
+      getSetting: () => undefined, setSetting: () => {},
+      registerPluginTool: (pluginName, tool) => {
+        registered.push({ pluginName, name: tool.name });
+        return () => {};
+      },
+    };
+    const ctx = createContext('tool-plugin', host);
+    const dispose = ctx.tools.register({
+      name: 'my-tool',
+      description: '测试工具',
+      execute: async () => 'ok',
+    });
+    expect(registered.length).toBe(1);
+    expect(registered[0].name).toBe('my-tool');
+    expect(typeof dispose).toBe('function');
+  });
+
+  it('缺 name 抛错', () => {
+    const ctx = createContext('tool-plugin', fakeHost());
+    expect(() => ctx.tools.register({ description: 'x', execute: () => {} })).toThrow();
+  });
+
+  it('缺 execute 抛错', () => {
+    const ctx = createContext('tool-plugin', fakeHost());
+    expect(() => ctx.tools.register({ name: 'x', description: 'x' })).toThrow();
+  });
+});

@@ -54,10 +54,26 @@ export interface AgentHandle {
   followup(msg: { role: 'user'; content: string }): Promise<boolean>;
 }
 
+/** 工具定义（插件注册用，对齐 DSH 的 ToolDefinition 精神） */
+export interface PluginToolDefinition {
+  /** 工具名（唯一） */
+  name: string;
+  /** 描述（发给 AI） */
+  description: string;
+  /** 参数 JSON Schema */
+  parameters?: any;
+  /** JS 调用签名（可选，用于提示词） */
+  jsApi?: string;
+  /** 执行函数 */
+  execute(args: any): Promise<any> | any;
+}
+
 /** tools 服务（对应 DSH 的 ctx.tools） */
 export interface ToolsService {
   /** 列出可用工具名 */
   list(): string[];
+  /** 注册一个工具（对齐 DSH 的 ctx.tools.register） */
+  register(tool: PluginToolDefinition): () => void;
 }
 
 /** sessions 服务 */
