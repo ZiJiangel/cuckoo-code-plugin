@@ -7,6 +7,7 @@ import { createContext } from '../src/plugins/dsh-compat/context.js';
 import { loadPluginModule, safeLoad } from '../src/plugins/dsh-compat/loader.js';
 import { ServiceRegistryImpl } from '../src/plugins/dsh-compat/service-registry.js';
 import { PluginHost } from '../src/plugins/dsh-compat/plugin-host.js';
+import { registerContext, unregisterContext, bindCuckooEvents } from '../src/plugins/dsh-compat/bridge.js';
 
 /** 一个假的宿主能力 */
 function fakeHost() {
@@ -306,5 +307,33 @@ describe('PluginHost - UI 插件能力', () => {
     // 直接检查该插件 ctx 上有无 ui 能力
     const c = host.getContext('ui-p');
     expect(!!(c.ui && c.ui.mount)).toBe(true);
+  });
+});
+
+
+describe('事件桥 - bindCuckooEvents', () => {
+  it('Cuckoo 事件转发为 DSH 事件名', () => {
+    const received = [];
+    const ctx = createContext('listener', fakeHost());
+    registerContext(ctx);
+    ctx.on('session/event', (rec) => received.push(['session', rec.type]));
+    ctx.on('tool/result', (r) => received.push(['tool', r.success]));
+
+    // 模拟 Cuckoo 事件源
+    let respCb = null, toolCb = null;
+    const src = {
+      onInterceptedResponse: (cb) => { respCb = cb; return () => {}; },
+      onStream: () => () => {},
+      onTaskIdle: () => () => {},
+      onToolCall: (cb) => { toolCb = cb; return () => {}; },
+    };
+    bindCuckooEvents(src);
+
+    respCb('hello', { tokenUsage: { accumulatedTokens: 100 } });
+    toolCb({ phase: 'end', code: 'read', success: true });
+
+    expect(received).toContainEqual(['session', 'assistant/message']);
+    expect(received).toContainEqual(['tool', true]);
+    unregisterContext(ctx);
   });
 });

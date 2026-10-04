@@ -52,6 +52,10 @@ export interface CuckooEventSource {
   onInterceptedResponse(cb: (text: string, meta: any) => void): () => void;
   onStream(cb: (ev: { think?: string; text?: string; finished?: boolean }) => void): () => void;
   onTaskIdle(cb: () => void): () => void;
+  /** 工具调用事件（可选） */
+  onToolCall?(cb: (ev: any) => void): () => void;
+  /** AI 错误事件（可选） */
+  onAiError?(cb: (ev: any) => void): () => void;
 }
 
 export function bindCuckooEvents(src: CuckooEventSource): () => void {
@@ -78,8 +82,36 @@ export function bindCuckooEvents(src: CuckooEventSource): () => void {
     broadcast('agent/task-idle', {});
   });
 
+  // 工具调用（可选事件源）
+  let d4: (() => void) | null = null;
+  if (typeof src.onToolCall === 'function') {
+    d4 = src.onToolCall((ev: any) => {
+      // DSH 标准事件：tool/call + tool/result
+      if (ev && ev.phase === 'start') {
+        broadcast('tool/call', { code: ev.code });
+      } else if (ev && ev.phase === 'end') {
+        broadcast('tool/result', {
+          code: ev.code,
+          success: !!ev.success,
+          output: ev.output,
+          error: ev.error,
+        });
+      }
+    });
+  }
+
+  // AI 错误（可选事件源）
+  let d5: (() => void) | null = null;
+  if (typeof src.onAiError === 'function') {
+    d5 = src.onAiError((ev: any) => {
+      broadcast('agent/error', ev || {});
+    });
+  }
+
   return () => {
     d1(); d2(); d3();
+    if (d4) d4();
+    if (d5) d5();
   };
 }
 

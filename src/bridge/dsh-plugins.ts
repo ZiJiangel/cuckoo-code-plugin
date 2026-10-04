@@ -11,7 +11,7 @@ import type { HostCapabilities, CuckooEventSource, PendingPluginSource } from '.
 import { bindCuckooEvents } from '../plugins/dsh-compat/index.js';
 import { sendToChat } from '../overlay/chat-input.js';
 import { getProviderByUrl } from '../providers/registry.js';
-import { onInterceptedResponse, onStream, onTaskIdle } from './intercept/observer.js';
+import { onInterceptedResponse, onStream, onTaskIdle, onToolCall, onAiError } from './intercept/observer.js';
 
 /** 从当前 URL 提取会话 id */
 function currentSessionId(): string | null {
@@ -93,7 +93,7 @@ export async function initDshPlugins(): Promise<void> {
 
   // 事件桥只绑一次
   if (!eventBound) {
-    const src: CuckooEventSource = { onInterceptedResponse, onStream, onTaskIdle };
+    const src: CuckooEventSource = { onInterceptedResponse, onStream, onTaskIdle, onToolCall, onAiError };
     bindCuckooEvents(src);
     eventBound = true;
   }
