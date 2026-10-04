@@ -59,12 +59,17 @@ function resolveEntry(mod: DshPluginModule, fallbackName?: string): { name: stri
   return { name, inject, apply };
 }
 
-/** 校验插件声明的服务是否都存在 */
+/**
+ * 校验插件声明的 inject 服务。
+ *
+ * 注意：DSH 允许插件 inject **任意**服务名（只要有人 provide）。
+ * 所以这里**只校验格式**（非空字符串），不限制为内置服务名单。
+ * 内置服务（agents/tools/sessions/settings）只是"必定存在"的常用服务。
+ */
 function checkInject(host: HostCapabilities, inject: ServiceName[]): void {
-  const available = new Set<ServiceName>(['agents', 'tools', 'sessions', 'settings']);
   for (const svc of inject) {
-    if (!available.has(svc)) {
-      throw new Error('插件 inject 了不存在的服务: ' + svc);
+    if (typeof svc !== 'string' || !svc.trim()) {
+      throw new Error('inject 服务名非法（须为非空字符串）');
     }
   }
 }
@@ -85,17 +90,45 @@ export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, c
     }
   }
 
-  // 激活（apply 可能是 async，但我们同步返回句柄；错误在内部捕获）
-  try {
-    const ret = apply(ctx, config);
-    if (ret && typeof (ret as any).then === 'function') {
-      (ret as Promise<any>).catch((err: any) => {
-        console.error('[dsh-compat] 插件 apply 异步出错 (' + name + '):', err);
-      });
+  // 激活：若声明的 inject 服务未就绪，推迟到就绪后再 apply
+  const doApply = (): void => {
+    try {
+      const ret = apply(ctx, config);
+      if (ret && typeof (ret as any).then === 'function') {
+        (ret as Promise<any>).catch((err: any) => {
+          console.error('[dsh-compat] 插件 apply 异步出错 (' + name + '):', err);
+        });
+      }
+    } catch (err: any) {
+      console.error('[dsh-compat] 插件 apply 出错 (' + name + '):', err && err.message ? err.message : err);
     }
-  } catch (err: any) {
-    console.error('[dsh-compat] 插件 apply 出错 (' + name + '):', err && err.message ? err.message : err);
-    throw err;
+  };
+
+  if (registry && inject.length > 0) {
+    // 检查所有 inject 服务是否就绪
+    const missing = inject.filter((svc) => !registry.has(svc));
+    if (missing.length > 0) {
+      // 有未就绪的服务：注册 onReady，全部就绪后 apply
+      let ready = false;
+      const cleanups: Array<() => void> = [];
+      const tryApply = (): void => {
+        if (ready) return;
+        const stillMissing = inject.filter((svc) => !registry.has(svc));
+        if (stillMissing.length > 0) return;
+        ready = true;
+        for (const c of cleanups) { try { c(); } catch (_) {} }
+        doApply();
+      };
+      for (const svc of missing) {
+        cleanups.push(registry.onReady(svc, tryApply));
+      }
+      // 可能注册瞬间就已就绪
+      tryApply();
+    } else {
+      doApply();
+    }
+  } else {
+    doApply();
   }
 
   return {

@@ -134,11 +134,17 @@ describe('loadPluginModule - 入口契约', () => {
     expect(r.error).toMatch(/apply/);
   });
 
-  it('inject 不存在的服务时报错', () => {
+  it('inject 任意服务名不再报错（DSH 允许自定义服务）', () => {
     const mod = { name: 'x', inject: ['not-exist'], apply() {} };
     const r = safeLoad(() => loadPluginModule(mod, fakeHost()));
+    expect(r.ok).toBe(true);
+  });
+
+  it('inject 非法格式（空串）报错', () => {
+    const mod = { name: 'x', inject: [''], apply() {} };
+    const r = safeLoad(() => loadPluginModule(mod, fakeHost()));
     expect(r.ok).toBe(false);
-    expect(r.error).toMatch(/not-exist/);
+    expect(r.error).toMatch(/inject/);
   });
 
   it('裸 default 导出被拒', () => {
@@ -369,5 +375,34 @@ describe('ctx.scope - 子作用域', () => {
     s.dispose();
     ctx.emit('x');
     expect(count).toBe(1);
+  });
+});
+
+
+describe('依赖等待 - inject 服务就绪才 apply', () => {
+  it('服务未就绪时不 apply，就绪后才 apply', () => {
+    const reg = new ServiceRegistryImpl();
+    let applied = false;
+    const mod = {
+      name: 'waiter',
+      inject: ['later-svc'],
+      apply() { applied = true; },
+    };
+    // 用 loadPluginModule（带 registry）
+    loadPluginModule(mod, fakeHost(), undefined, reg);
+    // 服务未就绪 → 还没 apply
+    expect(applied).toBe(false);
+    // 提供服务 → 触发 apply
+    reg.provide('later-svc', { ok: true });
+    expect(applied).toBe(true);
+  });
+
+  it('服务已就绪时立即 apply', () => {
+    const reg = new ServiceRegistryImpl();
+    reg.provide('ready-svc', {});
+    let applied = false;
+    const mod = { name: 'immediate', inject: ['ready-svc'], apply() { applied = true; } };
+    loadPluginModule(mod, fakeHost(), undefined, reg);
+    expect(applied).toBe(true);
   });
 });
