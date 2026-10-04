@@ -6,7 +6,7 @@ import { EventBus } from '../src/plugins/dsh-compat/events.js';
 import { createContext } from '../src/plugins/dsh-compat/context.js';
 import { loadPluginModule, safeLoad } from '../src/plugins/dsh-compat/loader.js';
 import { ServiceRegistryImpl } from '../src/plugins/dsh-compat/service-registry.js';
-import { PluginHost } from '../src/plugins/dsh-compat/plugin-host.js';
+import { PluginHost, diagnose } from '../src/plugins/dsh-compat/plugin-host.js';
 import { registerContext, unregisterContext, bindCuckooEvents } from '../src/plugins/dsh-compat/bridge.js';
 
 /** 一个假的宿主能力 */
@@ -416,5 +416,25 @@ describe('卸载清理 - 服务注销', () => {
     expect(reg.has('temp-svc')).toBe(true);
     ctx.__dispose();
     expect(reg.has('temp-svc')).toBe(false);
+  });
+});
+
+
+describe('diagnose - 可操作错误诊断', () => {
+  it('ESM 残留', () => {
+    const d = diagnose("Unexpected token 'export'", { name: 'x', kind: 'dsh' });
+    expect(d).toMatch(/ESM/);
+  });
+  it('缺 apply', () => {
+    const d = diagnose('插件缺少 apply(ctx, config) 入口函数', { name: 'x', kind: 'dsh' });
+    expect(d).toMatch(/缺入口/);
+  });
+  it('裸 default', () => {
+    const d = diagnose('插件用裸 export default 导出', { name: 'x', kind: 'dsh' });
+    expect(d).toMatch(/导出方式/);
+  });
+  it('其他错误原样带前缀', () => {
+    const d = diagnose('some random error', { name: 'x', kind: 'ui' });
+    expect(d).toMatch(/ui 插件加载失败/);
   });
 });

@@ -52,6 +52,39 @@ export interface PendingPluginSource {
 /**
  * 插件宿主：统一管理所有插件
  */
+/**
+ * 把原始错误翻译成"可操作诊断"。
+ * 目标是让插件作者知道哪里错了、怎么修。
+ */
+export function diagnose(rawError: string, source: { name: string; kind: PluginKind }): string {
+  const e = String(rawError || '');
+  // 1. ESM 语法残留
+  if (/Unexpected token .export.|Cannot use import statement/.test(e)) {
+    return "[ESM 语法错误] 插件必须用 ESM 命名导出：export const name / export function apply。原始错误: " + e;
+  }
+  // 2. 缺 apply
+  if (/缺少 apply|apply.*入口/.test(e)) {
+    return "[缺入口] 插件必须导出 apply(ctx, config) 函数。原始错误: " + e;
+  }
+  // 3. 裸 default 导出
+  if (/裸 export default/.test(e)) {
+    return "[导出方式错误] 不要用 export default，请用 export function apply，否则 inject 会丢失。原始错误: " + e;
+  }
+  // 4. 语法错误
+  if (/SyntaxError|Unexpected token|Unexpected end/.test(e)) {
+    return "[语法错误] 插件源码有语法错误，请检查括号/引号是否配对。原始错误: " + e;
+  }
+  // 5. inject 格式
+  if (/inject/.test(e) && /非法|空/.test(e)) {
+    return "[inject 非法] inject 必须是非空字符串数组。原始错误: " + e;
+  }
+  // 6. require 外部模块
+  if (/require 外部模块/.test(e)) {
+    return "[不支持 require] DSH 插件应自包含，不能 require 外部模块。原始错误: " + e;
+  }
+  return "[" + source.kind + " 插件加载失败] " + e;
+}
+
 export class PluginHost {
   private records = new Map<string, PluginRecord>();
   private failures: LoadFailure[] = [];
@@ -84,7 +117,8 @@ export class PluginHost {
       });
       return { ok: true };
     } catch (err: any) {
-      const error = err && err.message ? err.message : String(err);
+      const raw = err && err.message ? err.message : String(err);
+      const error = diagnose(raw, source);
       this.failures.push({ name: source.name, kind: source.kind, error });
       return { ok: false, error };
     }
