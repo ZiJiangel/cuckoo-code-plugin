@@ -114,6 +114,33 @@ export async function initDshPlugins(): Promise<void> {
   if (result.failed.length > 0) {
     console.error('[dsh-plugin] 加载失败:', result.failed.map((f) => f.name + ': ' + f.error).join(' | '));
   }
+
+  // 暴露到 window，供控制台调试 / UI 调用
+  exposeHostApi(h);
+}
+
+/** 把插件宿主能力暴露到 window（开发者调试 + UI 集成） */
+function exposeHostApi(h: PluginHost): void {
+  try {
+    (window as any).CuckooPlugins = {
+      /** 列出已加载插件名 */
+      list: () => h.list(),
+      /** 按类型列出 */
+      listByKind: (kind: 'dsh' | 'ui') => h.listByKind(kind),
+      /** 统计 */
+      stats: () => h.stats(),
+      /** 取某插件的上下文 */
+      context: (name: string) => h.getContext(name),
+      /** 取加载失败记录 */
+      failures: () => h.getFailures(),
+      /** 卸载全部 */
+      unloadAll: () => unloadAllDshPlugins(),
+      /** 广播事件到所有插件 */
+      broadcast: (event: string, ...args: any[]) => h.broadcast(event, ...args),
+    };
+  } catch (err) {
+    console.error('[dsh-plugin] 暴露宿主 API 失败:', err);
+  }
 }
 
 /** 卸载全部插件 */
