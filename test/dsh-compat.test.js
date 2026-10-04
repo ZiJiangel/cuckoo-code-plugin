@@ -406,3 +406,15 @@ describe('依赖等待 - inject 服务就绪才 apply', () => {
     expect(applied).toBe(true);
   });
 });
+
+
+describe('卸载清理 - 服务注销', () => {
+  it('插件卸载后服务被注销', () => {
+    const reg = new ServiceRegistryImpl();
+    const ctx = createContext('svc-provider', fakeHost(), reg);
+    ctx.provide('temp-svc', { v: 1 });
+    expect(reg.has('temp-svc')).toBe(true);
+    ctx.__dispose();
+    expect(reg.has('temp-svc')).toBe(false);
+  });
+});

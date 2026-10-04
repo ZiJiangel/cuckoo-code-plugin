@@ -165,9 +165,14 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
         // 无注册表时退化为本上下文私有
         (ctx as any).__local = (ctx as any).__local || {};
         (ctx as any).__local[svcName] = impl;
-        return () => { delete (ctx as any).__local[svcName]; };
+        const d = () => { delete (ctx as any).__local[svcName]; };
+        disposers.push(d);
+        return d;
       }
-      return registry.provide(svcName, impl);
+      const d = registry.provide(svcName, impl);
+      // 卸载时自动注销服务
+      disposers.push(d);
+      return d;
     },
     get(svcName) {
       if (registry && registry.has(svcName)) return registry.get(svcName);
