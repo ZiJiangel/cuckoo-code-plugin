@@ -196,6 +196,8 @@ export interface PluginContext {
     setWebViewVisible(visible: boolean): Promise<any>;
     /** 设主窗口材质（Win11 亚克力/Mica；'acrylic'|'mica'|'tabbed'|'none'） */
     setWindowMaterial(material: string): Promise<any>;
+    /** 通用槽位注册（对标 DSH slots）：往具名槽位加内容，按 order 排序 */
+    slot: { register(spec: any): () => void };
 
   };
   /**

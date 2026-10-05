@@ -50,6 +50,8 @@ interface UiFacade {
   setWebViewVisible?(visible: boolean): Promise<any>;
   /** 设主窗口材质（Win11 亚克力/Mica） */
   setWindowMaterial?(material: string): Promise<any>;
+  /** 通用槽位注册（对标 DSH slots） */
+  slot?: { register(spec: any): () => void };
 
   /** 覆盖层（Cuckoo 自己的视图，推荐 UI 插件使用） */
   overlay?: {
@@ -136,6 +138,22 @@ function attachUi(ctx: any, pluginName: string): void {
       const api = (window as any).electronAPI;
       if (api && typeof api.setWebViewVisible === 'function') return api.setWebViewVisible(visible);
       return Promise.resolve({ success: false, error: 'setWebViewVisible 不可用' });
+    },
+    /**
+     * 通用槽位注册（对标 DSH slots）：往具名槽位加内容，按 order 排序。
+     * @param spec { slot, id, order?, ...内容 }（slot 如 'activitybar'/'toolbar'/'statusbar'/'sidebar.panel'）
+     * @returns disposer（注销）
+     */
+    slot: {
+      register: (spec: any) => {
+        const api = (window as any).electronAPI;
+        const s = spec || {};
+        if (api && typeof api.slotRegister === 'function') {
+          api.slotRegister({ pluginId: pluginName, slot: s.slot, id: s.id, order: s.order, spec: s }).catch(() => {});
+          return () => { try { api.slotUnregister({ pluginId: pluginName, slot: s.slot, id: s.id }).catch(() => {}); } catch (_) {} };
+        }
+        return () => {};
+      },
     },
     /** 设主窗口材质（Win11 亚克力/Mica；纯 Electron 层）。material: 'acrylic'|'mica'|'tabbed'|'none' */
     setWindowMaterial(material: string) {

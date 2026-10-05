@@ -46,9 +46,16 @@ function listCommands(): RegisteredCommand[] {
   })) as any;
 }
 
-/** 触发命令：反向 IPC 到注册者执行 */
+/** 触发命令：反向 IPC 到注册者执行（支持裸 id：后缀匹配 '::id'）*/
 function invokeCommand(commandId: string): Promise<any> {
-  const reg = registered.get(commandId);
+  let reg = registered.get(commandId);
+  if (!reg) {
+    // 裸 id（如 'my-cmd'）→ 匹配 'plugin::my-cmd'
+    const suffix = '::' + commandId;
+    for (const r of registered.values()) {
+      if (r.commandId === commandId || r.commandId.endsWith(suffix)) { reg = r; break; }
+    }
+  }
   if (!reg) return Promise.resolve({ success: false, error: '命令不存在: ' + commandId });
   const { webContents } = require('electron');
   const wc = webContents.fromId(reg.webContentsId);
@@ -63,7 +70,7 @@ function invokeCommand(commandId: string): Promise<any> {
       clearTimeout(timer);
       resolve(r || { success: true });
     });
-    wc.send('plugin-command-invoke', { commandId, runId });
+    wc.send('plugin-command-invoke', { commandId: reg.commandId, runId });
   });
 }
 

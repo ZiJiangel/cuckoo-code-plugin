@@ -437,6 +437,30 @@ function registerPluginIpc(): void {
     } catch (_) {}
   });
 
+  // ===== 插件槽位（通用挂载：具名槽位 + order，对标 DSH slots）=====
+  const pluginSlots: Array<{ pluginId: string; slot: string; id: string; order: number; spec: any }> = [];
+  ipcMain.handle('plugin-slot-register', async (_event: any, { pluginId, slot, id, order, spec }: any = {}) => {
+    try {
+      if (!pluginId || !slot || !id) return { success: false, error: '缺 pluginId/slot/id' };
+      const exist = pluginSlots.find(s => s.pluginId === pluginId && s.slot === slot && s.id === id);
+      if (exist) { exist.order = typeof order === 'number' ? order : 100; exist.spec = spec; }
+      else pluginSlots.push({ pluginId, slot, id, order: typeof order === 'number' ? order : 100, spec });
+      const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+      if (mainWin && mainWin.webContents) mainWin.webContents.send('shell-slot-register', { pluginId, slot, id, order, spec });
+      return { success: true };
+    } catch (err: any) { return { success: false, error: err && err.message ? err.message : String(err) }; }
+  });
+  ipcMain.handle('plugin-slot-unregister', async (_event: any, { pluginId, slot, id }: any = {}) => {
+    try {
+      const idx = pluginSlots.findIndex(s => s.pluginId === pluginId && s.slot === slot && s.id === id);
+      if (idx >= 0) pluginSlots.splice(idx, 1);
+      const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+      if (mainWin && mainWin.webContents) mainWin.webContents.send('shell-slot-unregister', { pluginId, slot, id });
+      return { success: true };
+    } catch (err: any) { return { success: false, error: err && err.message ? err.message : String(err) }; }
+  });
+  ipcMain.handle('plugin-slot-list', async () => ({ success: true, slots: pluginSlots }));
+
   // ===== 插件界面挂载（Cuckoo 壳页面：侧边栏/状态栏/工具栏）=====
   // 缓存已挂载请求（壳页面可能晚于插件加载；就绪后补发）
   const shellMounts: Array<{ pluginId: string; target: string; id: string; spec: any }> = [];

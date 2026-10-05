@@ -66,6 +66,13 @@ const shellAPI = {
     ipcRenderer.on('shell-background', (_e: any, data: any) => cb(data));
   },
   getShellBackground: () => ipcRenderer.invoke('plugin-shell-background-list'),
+  // 命令（插件命令，工具栏按钮等触发）
+  commandInvoke: (commandId: string) => ipcRenderer.invoke('plugin-command-invoke', { commandId }),
+  commandList: () => ipcRenderer.invoke('plugin-command-list'),
+  // 通用槽位
+  onPluginSlotRegister: (cb: (m: any) => void) => { ipcRenderer.on('shell-slot-register', (_e: any, m: any) => cb(m)); },
+  onPluginSlotUnregister: (cb: (m: any) => void) => { ipcRenderer.on('shell-slot-unregister', (_e: any, m: any) => cb(m)); },
+  listPluginSlots: () => ipcRenderer.invoke('plugin-slot-list'),
   // 插件配置
   pluginConfigGet: (pluginId: string) => ipcRenderer.invoke('plugin-config-get', { pluginId }),
   pluginConfigSet: (pluginId: string, values: any) => ipcRenderer.invoke('plugin-config-set', { pluginId, values }),

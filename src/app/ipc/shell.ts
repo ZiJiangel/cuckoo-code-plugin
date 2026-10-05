@@ -234,11 +234,8 @@ function registerShellIpc(): void {
 
   // 应用信息（关于页：版本号）
   ipcMain.handle('get-app-info', async () => {
-    let version = '';
-    try { version = app.getVersion(); } catch (_) {}
-    // 插件改造版：版本号加分支后缀（区别于原版）
-    if (version) version = version + '-plugin-ui-ext';
-    return { success: true, version };
+    // 插件改造版：独立版本号（前两版 0.0.1/0.0.2），带分支标识区别于原版
+    return { success: true, version: '0.0.3-plugin-ui-ext' };
   });
 
   // 打开外部链接（关于页：GitHub 源码地址）
