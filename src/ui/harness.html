@@ -72,11 +72,11 @@
   html, body {
     margin: 0; height: 100%;
     font-family: var(--sans);
-    background: var(--bg); color: var(--text);
+    background: transparent; color: var(--text);
     overflow: hidden; font-size: 14px;
     -webkit-font-smoothing: antialiased;
   }
-  .app { display: flex; flex-direction: column; height: 100vh; }
+  .app { display: flex; flex-direction: column; height: 100vh; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 
   /* ===== 顶栏 ===== */
   .topbar {
@@ -2625,6 +2625,43 @@
       api.themeGet().then(function (r) { if (r && r.success && r.snapshot) applyTheme(r.snapshot); }).catch(function () {});
     }
     if (typeof api.themeSubscribe === 'function') api.themeSubscribe().catch(function () {});
+
+    // 插件注入的 CSS（壁纸/字体等）：harness 也是 Cuckoo 界面，一起跟随
+    function applyPluginStyle(pluginId, css) {
+      if (!pluginId || typeof css !== 'string') return;
+      var tag = document.querySelector('style[data-plugin-style="' + pluginId + '"]');
+      if (!tag) { tag = document.createElement('style'); tag.setAttribute('data-plugin-style', pluginId); document.head.appendChild(tag); }
+      tag.textContent = css;
+    }
+    if (typeof api.onPluginStyle === 'function') api.onPluginStyle(function (m) { if (m) applyPluginStyle(m.pluginId, m.css); });
+    // 拉取已缓存的插件 CSS（harness 懒加载，插件加载时可能还没进纯净模式）
+    if (typeof api.listPluginStyles === 'function') {
+      api.listPluginStyles().then(function (r) { if (r && r.success && r.styles) { for (var i = 0; i < r.styles.length; i++) { try { applyPluginStyle(r.styles[i].pluginId, r.styles[i].css); } catch (e) {} } } }).catch(function () {});
+    }
+    if (typeof api.onPluginStyleRemove === 'function') api.onPluginStyleRemove(function (m) {
+      if (!m || !m.pluginId) return;
+      var tag = document.querySelector('style[data-plugin-style="' + m.pluginId + '"]');
+      if (tag && tag.parentNode) tag.parentNode.removeChild(tag);
+    });
+
+    // 插件背景图（基座对齐：background-position 补偿 offsetX/offsetY）
+    function applyBackground(data) {
+      var tag = document.getElementById('ck-harness-bg');
+      if (!data || !data.url) { if (tag) tag.remove(); return; }
+      if (!tag) { tag = document.createElement('style'); tag.id = 'ck-harness-bg'; document.head.appendChild(tag); }
+      var overlay = data.overlay || 'rgba(10,12,20,0.5)';
+      var ox = data.offsetX || 0, oy = data.offsetY || 0;
+      var w = data.winW || window.innerWidth, h = data.winH || window.innerHeight;
+      // 锚定窗口左上角：图铺窗口尺寸，harness 偏移 (-ox,-oy)；铺在 html/body 保证填满视口
+      tag.textContent = 'html, body { background: linear-gradient(' + overlay + ',' + overlay + '), url(' + data.url + ') no-repeat fixed !important;' +
+        'background-size: auto, ' + w + 'px ' + h + 'px !important;' +
+        'background-position: 0 0, -' + ox + 'px -' + oy + 'px !important; }';
+    }
+    if (typeof api.onHarnessBackground === 'function') api.onHarnessBackground(applyBackground);
+    // 拉取已缓存的背景（harness 懒加载，插件设背景时可能还没进纯净模式）
+    if (typeof api.getHarnessBackground === 'function') {
+      api.getHarnessBackground().then(function (r) { if (r && r.success && r.background) applyBackground({ url: r.background.url, overlay: r.background.overlay, offsetX: r.offsetX, offsetY: r.offsetY, winW: r.winW, winH: r.winH }); }).catch(function () {});
+    }
   })();
 })();
 </script>

@@ -56,7 +56,6 @@ export type {
   ThemeService, ThemeSnapshot, ThemeDefinition, ThemeTokens,
   ThemeTokenModes, ThemeTokenOverrides, ThemePreference,
 } from './theme-runtime.js';
-export { getThemeService, resetThemeService } from './theme-service.js';
 export { createThemeProxy } from './theme-proxy.js';
 
 export { PluginHost, diagnose } from './plugin-host.js';

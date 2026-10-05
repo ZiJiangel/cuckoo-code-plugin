@@ -60,6 +60,9 @@ let electronAPI: any = {
   // ========== 插件注入壳页面 CSS（对标 DSH styles.insert）==========
   shellStyleAdd: (pluginId: string, css: string) => ipcRenderer.invoke('plugin-shell-style-add', { pluginId, css }),
   shellStyleRemove: (pluginId: string) => ipcRenderer.invoke('plugin-shell-style-remove', { pluginId }),
+  setWebViewVisible: (visible: boolean) => ipcRenderer.invoke('plugin-set-webview-visible', { visible }),
+  setWindowMaterial: (material: string) => ipcRenderer.invoke('plugin-set-window-material', { material }),
+  shellBackground: (pluginId: string, url: string | null, overlay?: string) => ipcRenderer.invoke('plugin-shell-background', { pluginId, url, overlay }),
   // ========== 主题（IPC 代理到主进程权威） ==========
   themeGet: () => ipcRenderer.invoke('theme-get'),
   themeSet: (id: string) => ipcRenderer.invoke('theme-set', { id }),

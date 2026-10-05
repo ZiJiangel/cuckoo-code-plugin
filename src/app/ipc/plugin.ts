@@ -480,6 +480,15 @@ function registerPluginIpc(): void {
       if (mainWin && mainWin.webContents) {
         mainWin.webContents.send('shell-plugin-style', { pluginId, css });
       }
+      // 纯净模式页面（harness）也推：让它的面板透明，透出下层壳页面壁纸
+      try {
+        for (const c of windowState.getAllContexts()) {
+          const hv = (c as any).harnessView;
+          if (hv && hv.webContents && !hv.webContents.isDestroyed()) {
+            hv.webContents.send('harness-plugin-style', { pluginId, css });
+          }
+        }
+      } catch (_) {}
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err && err.message ? err.message : String(err) };
@@ -493,6 +502,14 @@ function registerPluginIpc(): void {
       if (mainWin && mainWin.webContents) {
         mainWin.webContents.send('shell-plugin-style-remove', { pluginId });
       }
+      try {
+        for (const c of windowState.getAllContexts()) {
+          const hv = (c as any).harnessView;
+          if (hv && hv.webContents && !hv.webContents.isDestroyed()) {
+            hv.webContents.send('harness-plugin-style-remove', { pluginId });
+          }
+        }
+      } catch (_) {}
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err && err.message ? err.message : String(err) };
@@ -500,6 +517,75 @@ function registerPluginIpc(): void {
   });
   ipcMain.handle('plugin-shell-style-list', async () => {
     return { success: true, styles: shellStyles };
+  });
+
+  // ===== 插件设窗口材质（Win11 亚克力/Mica；纯 Electron 层）=====
+  ipcMain.handle('plugin-set-window-material', async (_event: any, { material }: any = {}) => {
+    try {
+      const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+      if (!mainWin || mainWin.isDestroyed()) return { success: false, error: '无主窗口' };
+      if (typeof mainWin.setBackgroundMaterial !== 'function') return { success: false, error: '当前平台不支持窗口材质（需 Win11）' };
+      const m = typeof material === 'string' ? material : 'none';
+      mainWin.setBackgroundMaterial(m);
+      return { success: true };
+    } catch (err: any) { return { success: false, error: err && err.message ? err.message : String(err) }; }
+  });
+
+  // ===== 插件背景图（基座负责对齐壳页面 + harness）=====
+  let shellBackground: { pluginId: string; url: string; overlay: string } | null = null;
+  const pushBackground = (): void => {
+    const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+    const ctx = windowState.getMainContext ? windowState.getMainContext() : null;
+    // 偏移用 harness view 的实际 bounds（它的位置才是对齐基准）
+    let sbw = 0, tbh = 0, winW = 0, winH = 0;
+    try {
+      const c0 = windowState.getMainContext ? windowState.getMainContext() : null;
+      const hv0 = c0 && (c0 as any).harnessView;
+      if (hv0 && !hv0.webContents.isDestroyed() && hv0.getBounds) { const b = hv0.getBounds(); sbw = b.x; tbh = b.y; }
+    } catch (_) {}
+    if (!sbw && (mainWin as any).__ckSidebarWidth != null) sbw = (mainWin as any).__ckSidebarWidth;
+    if (!tbh && (mainWin as any).__ckToolbarHeight != null) tbh = (mainWin as any).__ckToolbarHeight;
+    try { const sz = mainWin.getContentSize(); winW = sz[0]; winH = sz[1]; } catch (_) {}
+    if (mainWin && mainWin.webContents) {
+      mainWin.webContents.send('shell-background', shellBackground ? { url: shellBackground.url, overlay: shellBackground.overlay, winW, winH } : null);
+    }
+    try {
+      for (const c of windowState.getAllContexts()) {
+        const hv = (c as any).harnessView;
+        if (hv && hv.webContents && !hv.webContents.isDestroyed()) {
+          hv.webContents.send('harness-background', shellBackground ? { url: shellBackground.url, overlay: shellBackground.overlay, offsetX: sbw, offsetY: tbh, winW, winH } : null);
+        }
+      }
+    } catch (_) {}
+  };
+  ipcMain.handle('plugin-shell-background', async (_event: any, { pluginId, url, overlay }: any = {}) => {
+    try {
+      if (url === null || url === undefined) { shellBackground = null; }
+      else shellBackground = { pluginId: String(pluginId || ''), url: String(url), overlay: String(overlay || 'rgba(10,12,20,0.5)') };
+      pushBackground();
+      return { success: true };
+    } catch (err: any) { return { success: false, error: err && err.message ? err.message : String(err) }; }
+  });
+  ipcMain.handle('plugin-shell-background-list', async () => {
+    const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+    const ctx = windowState.getMainContext ? windowState.getMainContext() : null;
+    let sbw = 0, tbh = 0;
+    try { const v = ctx && ctx.view; if (v && v.getBounds) { const b = v.getBounds(); sbw = b.x; tbh = b.y; } } catch (_) {}
+    let winW = 0, winH = 0;
+    try { const sz = mainWin.getContentSize(); winW = sz[0]; winH = sz[1]; } catch (_) {}
+    return { success: true, background: shellBackground, offsetX: sbw, offsetY: tbh, winW, winH };
+  });
+
+  // ===== 插件控制 AI 视图（DS 页面）显隐（纯 Electron 层，不碰页面）=====
+  ipcMain.handle('plugin-set-webview-visible', async (event: any, { visible }: any = {}) => {
+    try {
+      const view = windowState.getViewByWebContents(event.sender);
+      if (!view || !view.webContents || view.webContents.isDestroyed()) return { success: false, error: '视图不可用' };
+      try { view.setVisible(!!visible); } catch (_) {}
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
   });
 
   // ===== 插件覆盖层（overlay）：Cuckoo 自己的透明置顶视图，插件 UI 住这里 =====

@@ -61,6 +61,11 @@ const shellAPI = {
     ipcRenderer.on('shell-plugin-style-remove', (_e: any, data: any) => cb(data));
   },
   listPluginShellStyles: () => ipcRenderer.invoke('plugin-shell-style-list'),
+  // 插件背景图（基座对齐）
+  onShellBackground: (cb: (data: any) => void) => {
+    ipcRenderer.on('shell-background', (_e: any, data: any) => cb(data));
+  },
+  getShellBackground: () => ipcRenderer.invoke('plugin-shell-background-list'),
   // 插件配置
   pluginConfigGet: (pluginId: string) => ipcRenderer.invoke('plugin-config-get', { pluginId }),
   pluginConfigSet: (pluginId: string, values: any) => ipcRenderer.invoke('plugin-config-set', { pluginId, values }),

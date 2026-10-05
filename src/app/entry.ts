@@ -268,7 +268,8 @@ function createWindow(profile: any) {
     });
     mainWindow.contentView.addChildView(hv);
     // harness 页面加载前的底色：跟随系统深浅色（对齐设计规范，加载后由页面 CSS 接管）
-    hv.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#16181d' : '#ffffff');
+    // 透明：让 harness 透出下面的壳页面（壁纸/背景）
+    hv.setBackgroundColor('#00000000');
     hv.setBounds({ x: 0, y: 0, width: 0, height: 0 });
     harnessView = hv;
     (mainWindow as any).__ckHarnessView = hv;
@@ -399,9 +400,20 @@ function createWindow(profile: any) {
     if (next) {
       // 懒加载：首次进入纯净模式才创建 harness 视图
       const hv = ensureHarnessView();
+      try { hv.setVisible(true); } catch (_) {}
+      // 隐藏 AI 视图（DS 页面）→ harness 透明可透出壳页面壁纸，天然对齐
+      try { if (view && !view.webContents.isDestroyed()) view.setVisible(false); } catch (_) {}
       layoutView();
       if (hv && !hv.webContents.isDestroyed()) hv.webContents.focus();
     } else {
+      // 切回网页模式：显式隐藏 harness（setVisible + setBounds 双保险，避免盖住工具栏）
+      const hv0 = (mainWindow as any).__ckHarnessView;
+      if (hv0 && !hv0.webContents.isDestroyed()) {
+        try { hv0.setVisible(false); } catch (_) {}
+        try { hv0.setBounds({ x: 0, y: 0, width: 0, height: 0 }); } catch (_) {}
+      }
+      // 恢复 AI 视图（DS 页面）
+      try { if (view && !view.webContents.isDestroyed()) view.setVisible(true); } catch (_) {}
       layoutView();
     }
     // overlay 现在是独立 BrowserWindow（不是 WebContentsView），它本来就浮在主窗口之上，

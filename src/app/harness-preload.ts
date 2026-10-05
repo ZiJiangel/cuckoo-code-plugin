@@ -45,6 +45,19 @@ const harnessAPI = {
   onThemeChanged: (cb: (snapshot: any) => void) => {
     ipcRenderer.on('theme-changed', (_e: any, snap: any) => cb(snap));
   },
+  // 插件注入壳页面 CSS（harness 也是 Cuckoo 界面，一起跟随）
+  onPluginStyle: (cb: (data: any) => void) => {
+    ipcRenderer.on('harness-plugin-style', (_e: any, data: any) => cb(data));
+  },
+  onPluginStyleRemove: (cb: (data: any) => void) => {
+    ipcRenderer.on('harness-plugin-style-remove', (_e: any, data: any) => cb(data));
+  },
+  listPluginStyles: () => ipcRenderer.invoke('plugin-shell-style-list'),
+  // 插件背景图（基座对齐：带 offset 补偿）
+  onHarnessBackground: (cb: (data: any) => void) => {
+    ipcRenderer.on('harness-background', (_e: any, data: any) => cb(data));
+  },
+  getHarnessBackground: () => ipcRenderer.invoke('plugin-shell-background-list'),
 };
 
 try {
