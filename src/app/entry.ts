@@ -370,6 +370,15 @@ function createWindow(profile: any) {
     } else {
       layoutView();
     }
+    // 无论进出纯净模式，都把 overlay（插件 UI）重新提到最顶层 ——
+    // addChildView 会把已有子视图移到顶层；否则 harnessView 会盖住桌宠。
+    try {
+      const ov = (mainWindow as any).__ckOverlayView;
+      if (ov && !ov.webContents.isDestroyed()) {
+        mainWindow.contentView.addChildView(ov);
+        layoutView();
+      }
+    } catch (_) {}
     // 注：不再向 AI 页面下发"纯净模式开关"。bridge 侧上报已不设门控
     //（门控一旦判断错就整片静默丢弃，曾导致界面空白 + 状态卡死）；
     // 主进程在没有 harness 视图时自会丢弃事件，无需 bridge 配合。
