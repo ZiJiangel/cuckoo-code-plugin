@@ -71,11 +71,47 @@ function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
 
+/** 注入/更新某插件的 <style>（data-plugin 标记，便于卸载清理） */
+function applyShellStyle(pluginId: string, css: string): void {
+  if (!pluginId || typeof css !== 'string') return;
+  let tag = document.querySelector('style[data-plugin-style="' + pluginId + '"]') as any;
+  if (!tag) {
+    tag = document.createElement('style');
+    tag.setAttribute('data-plugin-style', pluginId);
+    document.head.appendChild(tag);
+  }
+  tag.textContent = css;
+}
+
+/** 移除某插件的 <style> */
+function removeShellStyle(pluginId: string): void {
+  if (!pluginId) return;
+  const tag = document.querySelector('style[data-plugin-style="' + pluginId + '"]');
+  if (tag && tag.parentNode) tag.parentNode.removeChild(tag);
+}
+
 export function initPluginShell(): void {
   const wlog: any = (window as any);
   wlog.__shellMountLog = wlog.__shellMountLog || { received: [], pulled: null };
   try {
     const apiAny: any = api as any;
+    // 插件注入壳页面 CSS（对标 DSH styles.insert）
+    if (apiAny && typeof apiAny.onPluginShellStyle === 'function') {
+      apiAny.onPluginShellStyle((m: any) => {
+        try { if (m && m.pluginId) applyShellStyle(m.pluginId, m.css); } catch (_) {}
+      });
+    }
+    if (apiAny && typeof apiAny.onPluginShellStyleRemove === 'function') {
+      apiAny.onPluginShellStyleRemove((m: any) => {
+        try { if (m && m.pluginId) removeShellStyle(m.pluginId); } catch (_) {}
+      });
+    }
+    if (apiAny && typeof apiAny.listPluginShellStyles === 'function') {
+      apiAny.listPluginShellStyles().then((r: any) => {
+        if (!r || !r.success || !Array.isArray(r.styles)) return;
+        for (const s of r.styles) { try { applyShellStyle(s.pluginId, s.css); } catch (_) {} }
+      }).catch(() => {});
+    }
     if (apiAny && typeof apiAny.onPluginShellMount === 'function') {
       apiAny.onPluginShellMount((m: MountSpec) => {
         try {

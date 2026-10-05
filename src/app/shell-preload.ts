@@ -53,6 +53,14 @@ const shellAPI = {
   },
   // 拉取"已缓存的插件挂载"（壳页面就绪后补渲染）
   listPluginShellMounts: () => ipcRenderer.invoke('plugin-shell-list'),
+  // 插件注入壳页面 CSS
+  onPluginShellStyle: (cb: (data: any) => void) => {
+    ipcRenderer.on('shell-plugin-style', (_e: any, data: any) => cb(data));
+  },
+  onPluginShellStyleRemove: (cb: (data: any) => void) => {
+    ipcRenderer.on('shell-plugin-style-remove', (_e: any, data: any) => cb(data));
+  },
+  listPluginShellStyles: () => ipcRenderer.invoke('plugin-shell-style-list'),
   // 插件配置
   pluginConfigGet: (pluginId: string) => ipcRenderer.invoke('plugin-config-get', { pluginId }),
   pluginConfigSet: (pluginId: string, values: any) => ipcRenderer.invoke('plugin-config-set', { pluginId, values }),

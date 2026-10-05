@@ -190,6 +190,21 @@ function attachUi(ctx: any, pluginName: string): void {
       if (api && typeof api.shellMount === 'function') return api.shellMount(pluginName, 'toolbar', spec && spec.id, spec);
       return Promise.resolve({ success: false, error: 'shellMount 不可用' });
     },
+    /**
+     * 往 Cuckoo 壳页面注入任意 CSS（壁纸/字体/布局）。
+     * 对标 DSH 的 styles.insert(css)。只作用于 Cuckoo 自己的界面，不碰 AI 页面。
+     * @returns disposer（移除本插件注入的 CSS）
+     */
+    addStyle: (css: string) => {
+      const api = (window as any).electronAPI;
+      if (api && typeof api.shellStyleAdd === 'function') {
+        api.shellStyleAdd(pluginName, css).catch(() => {});
+        return () => {
+          try { if (api.shellStyleRemove) api.shellStyleRemove(pluginName).catch(() => {}); } catch (_) {}
+        };
+      }
+      return () => {};
+    },
   };
 
   (ui as any).injectMainWorld = (code: string) => {

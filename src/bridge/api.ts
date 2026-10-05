@@ -57,6 +57,9 @@ let electronAPI: any = {
   getUiPluginSources: () => {
     return ipcRenderer.invoke('plugin-ui-sources');
   },
+  // ========== 插件注入壳页面 CSS（对标 DSH styles.insert）==========
+  shellStyleAdd: (pluginId: string, css: string) => ipcRenderer.invoke('plugin-shell-style-add', { pluginId, css }),
+  shellStyleRemove: (pluginId: string) => ipcRenderer.invoke('plugin-shell-style-remove', { pluginId }),
   // ========== 主题（IPC 代理到主进程权威） ==========
   themeGet: () => ipcRenderer.invoke('theme-get'),
   themeSet: (id: string) => ipcRenderer.invoke('theme-set', { id }),

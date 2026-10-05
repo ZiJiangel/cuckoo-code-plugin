@@ -186,6 +186,12 @@ export interface PluginContext {
     addStatusItem(spec: { id: string; text: string; title?: string }): Promise<any>;
     /** 工具栏加按钮 */
     addToolbarButton(spec: { id: string; label: string; title?: string }): Promise<any>;
+    /**
+     * 往 Cuckoo 壳页面注入任意 CSS（壁纸/字体/布局）。
+     * 对标 DSH 的 styles.insert(css)。只作用于 Cuckoo 自己的界面，不碰 AI 页面。
+     * @returns disposer（移除本插件注入的 CSS）
+     */
+    addStyle(css: string): () => void;
   };
   /**
    * 本地 HTTP 服务：把插件目录暴露成 URL（"厚插件"的门槛）。

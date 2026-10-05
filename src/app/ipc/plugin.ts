@@ -466,6 +466,42 @@ function registerPluginIpc(): void {
     return { success: true, mounts: shellMounts };
   });
 
+  // ===== 插件注入壳页面 CSS（对标 DSH styles.insert）=====
+  // 插件往 Cuckoo 壳页面注入任意 CSS（壁纸/字体/布局）。不碰 AI 页面。
+  const shellStyles: Array<{ pluginId: string; css: string }> = [];
+  ipcMain.handle('plugin-shell-style-add', async (_event: any, { pluginId, css }: any = {}) => {
+    try {
+      if (typeof pluginId !== 'string' || !pluginId) return { success: false, error: '缺少 pluginId' };
+      if (typeof css !== 'string' || !css) return { success: false, error: '缺少 css' };
+      // 去重：同插件再注入则替换
+      const exist = shellStyles.find(s => s.pluginId === pluginId);
+      if (exist) exist.css = css; else shellStyles.push({ pluginId, css });
+      const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+      if (mainWin && mainWin.webContents) {
+        mainWin.webContents.send('shell-plugin-style', { pluginId, css });
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+  ipcMain.handle('plugin-shell-style-remove', async (_event: any, { pluginId }: any = {}) => {
+    try {
+      const idx = shellStyles.findIndex(s => s.pluginId === pluginId);
+      if (idx >= 0) shellStyles.splice(idx, 1);
+      const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+      if (mainWin && mainWin.webContents) {
+        mainWin.webContents.send('shell-plugin-style-remove', { pluginId });
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+  ipcMain.handle('plugin-shell-style-list', async () => {
+    return { success: true, styles: shellStyles };
+  });
+
   // ===== 插件覆盖层（overlay）：Cuckoo 自己的透明置顶视图，插件 UI 住这里 =====
   // 让插件"不注入 AI 页面"，从根上避免污染第三方页面。
   const findOverlayView = (event: any): any => {
