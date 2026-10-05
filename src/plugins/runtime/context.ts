@@ -13,8 +13,8 @@
  */
 import { EventBus } from './events.js';
 import type {
-  DshContext, AgentsService, AgentHandle, ToolsService, SessionsService, SettingsService,
-  ServiceRegistry, DshScope, PluginToolDefinition,
+  PluginContext, AgentsService, AgentHandle, ToolsService, SessionsService, SettingsService,
+  ServiceRegistry, PluginScope, PluginToolDefinition,
 } from './types.js';
 
 /** 宿主能力（由 bridge/entry 注入，避免本模块反向依赖上层） */
@@ -52,7 +52,7 @@ function num(host: HostCapabilities, key: string): number {
 /**
  * 创建一个 DSH 上下文的工厂
  */
-function createContext(name: string, host: HostCapabilities, registry?: ServiceRegistry): DshContext {
+function createContext(name: string, host: HostCapabilities, registry?: ServiceRegistry): PluginContext {
   const bus = new EventBus();
   const disposers: Array<() => void> = [];
 
@@ -117,7 +117,7 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
     set: (key: string, value: any) => host.setSetting(key, value),
   };
 
-  const ctx: DshContext = {
+  const ctx: PluginContext = {
     name,
     log: (...args: any[]) => console.log('[' + (host.logPrefix || 'plugin') + ':' + name + ']', ...args),
 
@@ -173,7 +173,7 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
     scope() {
       const scopeDisposers: Array<() => void> = [];
       let disposed = false;
-      const scope: DshScope = {
+      const scope: PluginScope = {
         effect(fn) {
           if (disposed) return () => {};
           try {
@@ -262,3 +262,4 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
 }
 
 export { createContext };
+

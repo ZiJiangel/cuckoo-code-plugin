@@ -19,7 +19,7 @@ import { loadPluginSource } from './loader.js';
 import type { LoadedPlugin } from './loader.js';
 import { attachUi } from './ui-runtime.js';
 import type { HostCapabilities } from './context.js';
-import type { DshContext } from './types.js';
+import type { PluginContext } from './types.js';
 import { ServiceRegistryImpl } from './service-registry.js';
 
 /** 插件类型 */
@@ -178,7 +178,7 @@ export class PluginHost {
   }
 
   /** 按名字取插件上下文 */
-  getContext(name: string): DshContext | null {
+  getContext(name: string): PluginContext | null {
     return this.records.get(name)?.plugin.ctx || null;
   }
 
@@ -222,3 +222,4 @@ export class PluginHost {
     }
   }
 }
+

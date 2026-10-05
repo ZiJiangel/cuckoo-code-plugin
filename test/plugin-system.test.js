@@ -10,7 +10,7 @@ import { Service } from '../src/plugins/runtime/service.js';
 import { esmToCjs } from '../src/plugins/runtime/loader.js';
 import { parseCordisPatch } from '../src/plugins/runtime/patch.js';
 import { PluginHost, diagnose } from '../src/plugins/runtime/plugin-host.js';
-import { registerContext, unregisterContext, bindCuckooEvents } from '../src/plugins/runtime/bridge.js';
+import { registerContext, unregisterContext, bindCuckooEvents } from '../src/plugins/runtime/compat/bridge.js';
 
 /** 一个假的宿主能力 */
 function fakeHost() {

@@ -13,9 +13,12 @@
  *   - Cuckoo→DSH 事件桥（bridge）
  */
 export type {
-  DshPluginFn, DshPluginObject, DshPluginModule, DshContext,
+  // 正式命名（Cuckoo 插件）
+  PluginFn, PluginObject, PluginModule, PluginContext, PluginScope,
+  // 兼容别名（历史 DSH 命名）
+  DshPluginFn, DshPluginObject, DshPluginModule, DshContext, DshScope,
   AgentsService, AgentHandle, ToolsService, SessionsService, SettingsService,
-  ServiceName, EventListener, DispatchMode, LoadResult, DshScope,
+  ServiceName, EventListener, DispatchMode, LoadResult,
 } from './types.js';
 
 export { Service } from './service.js';
@@ -26,11 +29,12 @@ export type { HostCapabilities } from './context.js';
 export { loadPluginModule, loadPluginSource, safeLoad, resolveEntry, checkInject, esmToCjs } from './loader.js';
 export type { LoadedPlugin } from './loader.js';
 
+// ===== 兼容层（Cuckoo 内部事件 → 插件事件名）=====
 export {
   registerContext, unregisterContext, clearContexts, getActiveContexts,
   bindCuckooEvents, broadcast,
-} from './bridge.js';
-export type { CuckooEventSource } from './bridge.js';
+} from './compat/bridge.js';
+export type { CuckooEventSource } from './compat/bridge.js';
 
 export {
   loadPlugins, unloadAllPlugins, getLoadedPluginNames,

@@ -20,8 +20,8 @@ import { loadPluginSource, safeLoad } from './loader.js';
 import { serviceRegistry } from './service-registry.js';
 import type { LoadedPlugin } from './loader.js';
 import type { HostCapabilities } from './context.js';
-import { registerContext, unregisterContext, bindCuckooEvents } from './bridge.js';
-import type { CuckooEventSource } from './bridge.js';
+import { registerContext, unregisterContext, bindCuckooEvents } from './compat/bridge.js';
+import type { CuckooEventSource } from './compat/bridge.js';
 
 /** UI 扩展的根容器 id 前缀 */
 const UI_ROOT_PREFIX = 'cuckoo-plugin-ui-';

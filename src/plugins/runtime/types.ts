@@ -15,23 +15,35 @@
 export type ServiceName = 'agents' | 'tools' | 'sessions' | 'settings' | 'logs';
 
 /** 插件入口：函数式 */
-export type DshPluginFn = (ctx: DshContext, config?: any) => void | Promise<void>;
+export type PluginFn = (ctx: PluginContext, config?: any) => void | Promise<void>;
 
 /** 插件入口：对象式 */
-export interface DshPluginObject {
+export interface PluginObject {
   name: string;
   inject?: ServiceName[];
-  apply: DshPluginFn;
+  apply: PluginFn;
 }
 
-/** 插件模块（一个 DSH 插件文件导出这些） */
-export interface DshPluginModule {
+/** 插件模块（一个插件文件导出这些） */
+export interface PluginModule {
   name?: string;
   inject?: ServiceName[];
-  apply?: DshPluginFn;
-  default?: DshPluginFn;
+  apply?: PluginFn;
+  default?: PluginFn;
   [key: string]: any;
 }
+
+// ===== 兼容别名（历史命名，保留以免破坏外部引用）=====
+/** @deprecated 用 PluginFn */
+export type DshPluginFn = PluginFn;
+/** @deprecated 用 PluginObject */
+export type DshPluginObject = PluginObject;
+/** @deprecated 用 PluginModule */
+export type DshPluginModule = PluginModule;
+/** @deprecated 用 PluginContext */
+export type DshContext = PluginContext;
+/** @deprecated 用 PluginScope */
+export type DshScope = PluginScope;
 
 /** 事件监听器 */
 export type EventListener = (...args: any[]) => any;
@@ -98,8 +110,8 @@ export interface SettingsService {
   set(key: string, value: any): void;
 }
 
-/** 上下文对象（对应 DSH 的 ctx） */
-export interface DshContext {
+/** 插件上下文（传给 apply 的 ctx） */
+export interface PluginContext {
   /** 插件名 */
   readonly name: string;
   /** 记录日志 */
@@ -125,8 +137,8 @@ export interface DshContext {
   // ===== 可逆副作用（DSH 核心）=====
   /** 注册一个可逆副作用；返回 disposer。卸载时自动调用。 */
   effect(fn: () => void | (() => void)): () => void;
-  /** 创建子作用域：隔离的 effect 生命周期（对齐 DSH ctx.scope()） */
-  scope(): DshScope;
+  /** 创建子作用域：隔离的 effect 生命周期 */
+  scope(): PluginScope;
 
   // ===== 服务提供 / 消费（DSH 核心）=====
   /** 向本上下文注册一个服务（供依赖方注入） */
@@ -180,7 +192,7 @@ export interface DshContext {
 }
 
 /** 子作用域：隔离的 effect 生命周期 */
-export interface DshScope {
+export interface PluginScope {
   /** 注册副作用（在本作用域内） */
   effect(fn: () => void | (() => void)): () => void;
   /** 监听事件（在本作用域内，dispose 时自动移除） */

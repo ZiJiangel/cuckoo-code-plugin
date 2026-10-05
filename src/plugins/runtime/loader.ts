@@ -17,12 +17,12 @@
 import { createContext } from './context.js';
 import { Service } from './service.js';
 import type { HostCapabilities } from './context.js';
-import type { DshContext, DshPluginModule, ServiceName, LoadResult, ServiceRegistry } from './types.js';
+import type { PluginContext, PluginModule, ServiceName, LoadResult, ServiceRegistry } from './types.js';
 
 /** 已加载的插件句柄 */
 export interface LoadedPlugin {
   name: string;
-  ctx: DshContext;
+  ctx: PluginContext;
   /** 该插件声明的依赖服务（供 PluginHost 跟踪） */
   inject: string[];
   dispose(): void;
@@ -32,7 +32,7 @@ export interface LoadedPlugin {
  * 从模块对象解析入口契约
  * @returns { name, inject, apply } 或抛错
  */
-function resolveEntry(mod: DshPluginModule, fallbackName?: string): { name: string; inject: ServiceName[]; apply: Function } {
+function resolveEntry(mod: PluginModule, fallbackName?: string): { name: string; inject: ServiceName[]; apply: Function } {
   if (!mod || (typeof mod !== 'object' && typeof mod !== 'function')) {
     throw new Error('插件模块必须是对象');
   }
@@ -117,7 +117,7 @@ function checkInject(host: HostCapabilities, inject: ServiceName[]): void {
 /**
  * 加载一个 DSH 风格插件模块
  */
-export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, config?: any, registry?: ServiceRegistry, beforeApply?: (ctx: DshContext) => void): LoadedPlugin {
+export function loadPluginModule(mod: PluginModule, host: HostCapabilities, config?: any, registry?: ServiceRegistry, beforeApply?: (ctx: PluginContext) => void): LoadedPlugin {
   const { name, inject, apply } = resolveEntry(mod);
   checkInject(host, inject);
 
@@ -242,7 +242,7 @@ export function esmToCjs(source: string): string {
  * 注意：会执行任意代码，调用方须确保来源可信。
  * 支持 ESM 与 CommonJS 两种写法。
  */
-export function loadPluginSource(source: string, host: HostCapabilities, fallbackName?: string, config?: any, registry?: ServiceRegistry, beforeApply?: (ctx: DshContext) => void): LoadedPlugin {
+export function loadPluginSource(source: string, host: HostCapabilities, fallbackName?: string, config?: any, registry?: ServiceRegistry, beforeApply?: (ctx: PluginContext) => void): LoadedPlugin {
   const isEsm = /(^|\n)\s*export\s/.test(source);
   const code = isEsm ? esmToCjs(source) : source;
   // 用 Function 包装成 CommonJS 模块环境
@@ -273,3 +273,4 @@ export function safeLoad(fn: () => LoadedPlugin): LoadResult & { plugin?: Loaded
 }
 
 export { resolveEntry, checkInject };
+

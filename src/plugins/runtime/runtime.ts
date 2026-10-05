@@ -13,8 +13,8 @@ import { loadPluginSource, safeLoad } from './loader.js';
 import { serviceRegistry } from './service-registry.js';
 import type { LoadedPlugin } from './loader.js';
 import type { HostCapabilities } from './context.js';
-import { registerContext, unregisterContext, bindCuckooEvents } from './bridge.js';
-import type { CuckooEventSource } from './bridge.js';
+import { registerContext, unregisterContext, bindCuckooEvents } from './compat/bridge.js';
+import type { CuckooEventSource } from './compat/bridge.js';
 
 /** 已加载的 DSH 插件 */
 const loaded: LoadedPlugin[] = [];

@@ -9,16 +9,16 @@
  * 每个已加载的插件上下文都持有自己的 EventBus，
  * 这里维护"活跃插件列表"，事件到来时逐个派发。
  */
-import type { DshContext } from './types.js';
+import type { PluginContext } from '../types.js';
 
 /** 活跃插件上下文集合 */
-const activeContexts = new Set<DshContext>();
+const activeContexts = new Set<PluginContext>();
 
-export function registerContext(ctx: DshContext): void {
+export function registerContext(ctx: PluginContext): void {
   activeContexts.add(ctx);
 }
 
-export function unregisterContext(ctx: DshContext): void {
+export function unregisterContext(ctx: PluginContext): void {
   activeContexts.delete(ctx);
 }
 
@@ -26,7 +26,7 @@ export function clearContexts(): void {
   activeContexts.clear();
 }
 
-export function getActiveContexts(): DshContext[] {
+export function getActiveContexts(): PluginContext[] {
   return Array.from(activeContexts);
 }
 
@@ -116,3 +116,4 @@ export function bindCuckooEvents(src: CuckooEventSource): () => void {
 }
 
 export { broadcast };
+
