@@ -47,6 +47,10 @@ const shellAPI = {
   onHarnessMode: (cb: (data: any) => void) => {
     ipcRenderer.on('shell-harness-mode', (_e: any, data: any) => cb(data));
   },
+  // 插件界面挂载（主进程 → 壳页面）
+  onPluginShellMount: (cb: (data: any) => void) => {
+    ipcRenderer.on('shell-plugin-mount', (_e: any, data: any) => cb(data));
+  },
   // 壳页面上报真实可视尺寸（供主进程精确布局 WebContentsView，避免菜单栏高度误差）
   reportShellSize: (w: number, h: number) => ipcRenderer.send('shell-report-size', { w, h }),
   // ========== 窗口管理 ==========

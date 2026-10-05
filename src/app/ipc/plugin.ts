@@ -351,6 +351,21 @@ function registerPluginIpc(): void {
     }
   });
 
+  // ===== 插件界面挂载（Cuckoo 壳页面：侧边栏/状态栏/工具栏）=====
+  ipcMain.handle('plugin-shell-mount', async (_event: any, { pluginId, target, id, spec }: any = {}) => {
+    try {
+      if (typeof pluginId !== 'string' || !pluginId) return { success: false, error: '缺少 pluginId' };
+      if (typeof target !== 'string' || !target) return { success: false, error: '缺少 target' };
+      // 转发给壳页面（mainWindow.webContents）
+      const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+      if (!mainWin || !mainWin.webContents) return { success: false, error: '无主窗口' };
+      mainWin.webContents.send('shell-plugin-mount', { pluginId, target, id, spec });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
   // ===== 插件覆盖层（overlay）：Cuckoo 自己的透明置顶视图，插件 UI 住这里 =====
   // 让插件"不注入 AI 页面"，从根上避免污染第三方页面。
   const findOverlayView = (event: any): any => {

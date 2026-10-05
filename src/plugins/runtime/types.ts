@@ -176,6 +176,27 @@ export interface PluginContext {
     read(relPath: string): Promise<Uint8Array>;
     url(relPath: string): Promise<string>;
   };
+  /**
+   * Cuckoo 界面挂载：插件 UI 集成进 Cuckoo 壳页面（侧边栏/状态栏/工具栏）。
+   */
+  shell?: {
+    /** 侧边栏加一页 */
+    addSidebarPanel(spec: { id: string; title: string; icon?: string; html?: string }): Promise<any>;
+    /** 状态栏加一项 */
+    addStatusItem(spec: { id: string; text: string; title?: string }): Promise<any>;
+    /** 工具栏加按钮 */
+    addToolbarButton(spec: { id: string; label: string; title?: string }): Promise<any>;
+  };
+  /**
+   * 本地 HTTP 服务：把插件目录暴露成 URL（"厚插件"的门槛）。
+   * 例：ctx.webServer.serve('/assets', 'assets') → http://127.0.0.1:<port>/plugins/<id>/assets/*
+   */
+  webServer?: {
+    /** 注册静态路由；返回 base URL */
+    serve(prefix: string, dir: string): Promise<{ success: boolean; url?: string; base?: string; port?: number; error?: string }>;
+    /** 取服务基础 URL（不含插件路径） */
+    info(): Promise<{ success: boolean; base?: string; port?: number; error?: string }>;
+  };
   /** token 统计（对齐 Cuckoo 状态栏口径） */
   tokens?: {
     /** 当前上下文 token */

@@ -46,6 +46,20 @@ interface UiFacade {
   injectScript(text: string): void;
   /** 注入 <script src>（等价于 DSH 的 script-src 行） */
   injectScriptSrc(src: string): void;
+  /** 覆盖层（Cuckoo 自己的视图，推荐 UI 插件使用） */
+  overlay?: {
+    init(): Promise<any>;
+    eval(code: string): Promise<any>;
+    html(html: string): Promise<any>;
+  };
+  /** Cuckoo 界面挂载（侧边栏/状态栏/工具栏） */
+  shell?: {
+    addSidebarPanel(spec: any): Promise<any>;
+    addStatusItem(spec: any): Promise<any>;
+    addToolbarButton(spec: any): Promise<any>;
+  };
+  /** 注入主世界（谨慎，会污染 AI 页面） */
+  injectMainWorld?(code: string): any;
 }
 
 /** 插件资源访问（等价于 DSH webServer 静态资源，Electron 用 IPC 实现） */
@@ -156,6 +170,25 @@ function attachUi(ctx: any, pluginName: string): void {
       const api = (window as any).electronAPI;
       if (api && typeof api.overlayHtml === 'function') return api.overlayHtml(html);
       return Promise.resolve({ success: false, error: 'overlayHtml 不可用' });
+    },
+  };
+
+  // Cuckoo 界面挂载（侧边栏/状态栏/工具栏）
+  (ui as any).shell = {
+    addSidebarPanel: (spec: any) => {
+      const api = (window as any).electronAPI;
+      if (api && typeof api.shellMount === 'function') return api.shellMount(pluginName, 'sidebar', spec && spec.id, spec);
+      return Promise.resolve({ success: false, error: 'shellMount 不可用' });
+    },
+    addStatusItem: (spec: any) => {
+      const api = (window as any).electronAPI;
+      if (api && typeof api.shellMount === 'function') return api.shellMount(pluginName, 'statusbar', spec && spec.id, spec);
+      return Promise.resolve({ success: false, error: 'shellMount 不可用' });
+    },
+    addToolbarButton: (spec: any) => {
+      const api = (window as any).electronAPI;
+      if (api && typeof api.shellMount === 'function') return api.shellMount(pluginName, 'toolbar', spec && spec.id, spec);
+      return Promise.resolve({ success: false, error: 'shellMount 不可用' });
     },
   };
 

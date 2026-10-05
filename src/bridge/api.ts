@@ -79,6 +79,18 @@ let electronAPI: any = {
   getTokenTotal: () => {
     return ipcRenderer.invoke('plugin-token-total');
   },
+  /** 插件界面挂载：往 Cuckoo 壳页面（侧边栏/状态栏/工具栏）挂 UI */
+  shellMount: (pluginId: string, target: string, id: string, spec: any) => {
+    return ipcRenderer.invoke('plugin-shell-mount', { pluginId, target, id, spec });
+  },
+  /** 插件 webServer：注册静态路由（暴露插件目录为 HTTP） */
+  webServerServe: (pluginId: string, prefix: string, dir: string) => {
+    return ipcRenderer.invoke('plugin-webserver-serve', { pluginId, prefix, dir });
+  },
+  /** 插件 webServer：取服务端口/基础 URL */
+  webServerInfo: () => {
+    return ipcRenderer.invoke('plugin-webserver-info');
+  },
   /** 插件覆盖层：初始化（创建透明置顶视图） */
   overlayInit: () => ipcRenderer.invoke('plugin-overlay-init'),
   /** 插件覆盖层：在覆盖层内执行 JS */

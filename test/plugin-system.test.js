@@ -795,3 +795,128 @@ describe('ctx.ui.overlay（插件覆盖层能力）', () => {
     expect(gotHtml).toBe('<div>x</div>');
   });
 });
+
+
+describe('ctx.webServer（本地 HTTP · 静态资源）', () => {
+  function mockDom() {
+    global.document = {
+      createElement: () => ({ id: '', style: {}, setAttribute: () => {}, appendChild: () => {}, isConnected: true, textContent: '', src: '' }),
+      getElementById: () => null,
+      body: { appendChild: () => {} },
+      head: { appendChild: () => {} },
+    };
+    global.window = { addEventListener: () => {}, removeEventListener: () => {}, innerWidth: 800, innerHeight: 600 };
+    global.Blob = class {};
+    global.URL = { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} };
+    global.atob = (s) => Buffer.from(s, 'base64').toString('binary');
+  }
+
+  it('UI 插件拿到 ctx.webServer（serve/info）', () => {
+    mockDom();
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ws-p', kind: 'ui', source: `export const name = 'ws-p'; export function apply(ctx) {}` });
+    const c = host.getContext('ws-p');
+    expect(!!(c.webServer)).toBe(true);
+    expect(typeof c.webServer.serve).toBe('function');
+    expect(typeof c.webServer.info).toBe('function');
+  });
+
+  it('webServer 不可用时优雅返回，不抛', async () => {
+    mockDom();
+    global.window.electronAPI = undefined;
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ws-p2', kind: 'ui', source: `export const name = 'ws-p2'; export function apply(ctx) {}` });
+    const c = host.getContext('ws-p2');
+    const r = await c.webServer.serve('/assets', 'assets');
+    expect(r && r.success).toBe(false);
+  });
+
+  it('webServer.serve 透传给 electronAPI', async () => {
+    mockDom();
+    let got = null;
+    global.window.electronAPI = {
+      webServerServe: async (pluginId, prefix, dir) => { got = { pluginId, prefix, dir }; return { success: true, url: 'http://127.0.0.1:9/x', port: 9 }; },
+      webServerInfo: async () => ({ success: true, base: 'http://127.0.0.1:9', port: 9 }),
+    };
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ws-p3', kind: 'ui', source: `export const name = 'ws-p3'; export function apply(ctx) {}` });
+    const c = host.getContext('ws-p3');
+    const r = await c.webServer.serve('/assets', 'assets');
+    expect(r.success).toBe(true);
+    expect(got.pluginId).toBe('ws-p3');
+    expect(got.prefix).toBe('/assets');
+    expect(got.dir).toBe('assets');
+  });
+});
+
+describe('ctx.ui.shell（Cuckoo 界面挂载）', () => {
+  function mockDom() {
+    global.document = {
+      createElement: () => ({ id: '', style: {}, setAttribute: () => {}, appendChild: () => {}, isConnected: true, textContent: '', src: '' }),
+      getElementById: () => null,
+      body: { appendChild: () => {} },
+      head: { appendChild: () => {} },
+    };
+    global.window = { addEventListener: () => {}, removeEventListener: () => {}, innerWidth: 800, innerHeight: 600 };
+    global.Blob = class {};
+    global.URL = { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} };
+    global.atob = (s) => Buffer.from(s, 'base64').toString('binary');
+  }
+
+  it('UI 插件拿到 ctx.ui.shell（三个方法）', () => {
+    mockDom();
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'sh-p', kind: 'ui', source: `export const name = 'sh-p'; export function apply(ctx) {}` });
+    const c = host.getContext('sh-p');
+    expect(!!(c.ui && c.ui.shell)).toBe(true);
+    expect(typeof c.ui.shell.addSidebarPanel).toBe('function');
+    expect(typeof c.ui.shell.addStatusItem).toBe('function');
+    expect(typeof c.ui.shell.addToolbarButton).toBe('function');
+  });
+
+  it('addStatusItem 透传 target=statusbar + pluginId', async () => {
+    mockDom();
+    let got = null;
+    global.window.electronAPI = {
+      shellMount: async (pluginId, target, id, spec) => { got = { pluginId, target, id }; return { success: true }; },
+    };
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'sh-p2', kind: 'ui', source: `export const name = 'sh-p2'; export function apply(ctx) {}` });
+    const c = host.getContext('sh-p2');
+    await c.ui.shell.addStatusItem({ id: 'x', text: 'hi' });
+    expect(got.pluginId).toBe('sh-p2');
+    expect(got.target).toBe('statusbar');
+    expect(got.id).toBe('x');
+  });
+
+  it('addToolbarButton 透传 target=toolbar', async () => {
+    mockDom();
+    let got = null;
+    global.window.electronAPI = {
+      shellMount: async (pluginId, target, id, spec) => { got = { pluginId, target, id }; return { success: true }; },
+    };
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'sh-p3', kind: 'ui', source: `export const name = 'sh-p3'; export function apply(ctx) {}` });
+    const c = host.getContext('sh-p3');
+    await c.ui.shell.addToolbarButton({ id: 'b', label: 'Hi' });
+    expect(got.target).toBe('toolbar');
+  });
+});

@@ -126,6 +126,24 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
     sessions,
     settings,
 
+    // 本地 HTTP 服务（静态资源）
+    webServer: {
+      serve: (prefix: string, dir: string) => {
+        try {
+          const api = (window as any).electronAPI;
+          if (api && typeof api.webServerServe === 'function') return api.webServerServe(name, prefix, dir);
+        } catch (_) {}
+        return Promise.resolve({ success: false, error: 'webServer 不可用' });
+      },
+      info: () => {
+        try {
+          const api = (window as any).electronAPI;
+          if (api && typeof api.webServerInfo === 'function') return api.webServerInfo();
+        } catch (_) {}
+        return Promise.resolve({ success: false, error: 'webServer 不可用' });
+      },
+    },
+
     // token 统计（取宿主能力）
     tokens: {
       context: () => num(host, 'context'),
