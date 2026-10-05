@@ -175,14 +175,27 @@ function createWindow(profile: any) {
   });
   mainWindow.contentView.addChildView(view);
 
-  // ========== 插件覆盖层视图（透明、置顶、浮在 AI 页面之上） ==========
+  // ========== 插件覆盖层窗口（透明、置顶、鼠标穿透） ==========
+  // 用独立 BrowserWindow（而非 WebContentsView）——因为只有 BrowserWindow 支持
+  // setIgnoreMouseEvents（鼠标穿透）；WebContentsView 不支持，会拦截 AI 页面的滚轮/点击。
   // 插件 UI（如桌宠）住在这里，不注入 AI 页面；由 ctx.ui.overlay 驱动。
-  let overlayView: any = null;
-  (mainWindow as any).__ckOverlayView = null;
+  let overlayWin: any = null;
+  (mainWindow as any).__ckOverlayView = null;  // 兼容旧引用名（值为 overlayWin）
   (mainWindow as any).__ckEnsureOverlay = () => ensureOverlayView();
   const ensureOverlayView = (): any => {
-    if (overlayView && !overlayView.webContents.isDestroyed()) return overlayView;
-    const ov = new WebContentsView({
+    if (overlayWin && !overlayWin.isDestroyed()) return overlayWin;
+    const ow = new BrowserWindow({
+      parent: mainWindow,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      movable: false,
+      minimizable: false,
+      maximizable: false,
+      skipTaskbar: true,
+      focusable: false,           // 不抢焦点
+      show: false,
+      hasShadow: false,
       webPreferences: {
         preload: path.join(import.meta.dirname, 'plugin-overlay-preload.js'),
         contextIsolation: true,
@@ -193,24 +206,29 @@ function createWindow(profile: any) {
         additionalArguments: ['--cuckoo-user-data=' + app.getPath('userData')],
       },
     });
-    mainWindow.contentView.addChildView(ov);
-    ov.setBackgroundColor('#00000000');   // 全透明
-    ov.setBounds({ x: 0, y: 0, width: 0, height: 0 });
-    overlayView = ov;
-    (mainWindow as any).__ckOverlayView = ov;
-    // 挂到窗口上下文（overlayView 由外部 getter 暴露，这里只确保 ensure 可用）
+    // 鼠标穿透：默认全穿透（滚轮/点击/滚动条透到 AI 页面）
+    try { ow.setIgnoreMouseEvents(true, { forward: true }); } catch (_) {}
+    overlayWin = ow;
+    (mainWindow as any).__ckOverlayView = ow;
+    // 主窗口关闭 → overlay 一起关
+    mainWindow.on('closed', () => { try { if (!ow.isDestroyed()) ow.destroy(); } catch (_) {} });
+    mainWindow.on('minimize', () => { try { ow.hide(); } catch (_) {} });
+    mainWindow.on('restore', () => { try { ow.showInactive(); } catch (_) {} });
+    // 挂到窗口上下文
     {
       const ctx: any = windowState.getWindowContext(mainWindow.id);
-      if (ctx) { ctx.__ckEnsureOverlay = () => ensureOverlayView(); }
+      if (ctx) { ctx.__ckEnsureOverlay = () => ensureOverlayView(); ctx.overlayView = ow; }
     }
-    // 加载覆盖层页面（内联 HTML，含插件的宿主资源桥）
-    ov.webContents.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(
+    // 加载覆盖层页面（内联 HTML）
+    ow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(
       '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}*{box-sizing:border-box}</style></head><body><div id="__ck_overlay_root"></div></body></html>'
     ));
-    ov.webContents.on('did-finish-load', () => console.log('[Cuckoo Overlay] 页面加载完成'));
-    // 创建后主动布局一次（延迟到 ensure 返回后，确保 __ckLayout 已挂）
+    ow.webContents.on('did-finish-load', () => {
+      console.log('[Cuckoo Overlay] 页面加载完成');
+      try { ow.showInactive(); } catch (_) {}
+    });
     setTimeout(() => { try { (mainWindow as any).__ckLayout && (mainWindow as any).__ckLayout(); } catch (_) {} }, 50);
-    return ov;
+    return ow;
   };
 
   // ========== 纯净对话模式（Harness）覆盖视图（懒加载） ==========
@@ -289,11 +307,12 @@ function createWindow(profile: any) {
       width: Math.max(0, w - sbw),
       height: Math.max(0, h - tbh - STATUS_HEIGHT),
     });
-    // overlay 覆盖整个"网页区域"（与 AI view 同位置）
+    // overlay（独立 BrowserWindow）覆盖整个"网页区域" —— 用屏幕坐标
     const ov = (mainWindow as any).__ckOverlayView;
-    if (ov && !ov.webContents.isDestroyed()) {
+    if (ov && !ov.isDestroyed()) {
+      const cb = mainWindow.getContentBounds();  // 窗口内容区在屏幕上的位置
       ov.setBounds({
-        x: sbw, y: tbh,
+        x: cb.x + sbw, y: cb.y + tbh,
         width: Math.max(0, w - sbw),
         height: Math.max(0, h - tbh - STATUS_HEIGHT),
       });
@@ -315,6 +334,7 @@ function createWindow(profile: any) {
   (mainWindow as any).__ckLayout = layoutView;
   layoutView();
   mainWindow.on('resize', layoutView);
+  mainWindow.on('move', layoutView);
 
   // 覆盖层：把"确保创建"挂到 windowState 的 ctx（供 IPC 调用；IPC 通过 getAllContexts 拿）
   {
@@ -370,15 +390,9 @@ function createWindow(profile: any) {
     } else {
       layoutView();
     }
-    // 无论进出纯净模式，都把 overlay（插件 UI）重新提到最顶层 ——
-    // addChildView 会把已有子视图移到顶层；否则 harnessView 会盖住桌宠。
-    try {
-      const ov = (mainWindow as any).__ckOverlayView;
-      if (ov && !ov.webContents.isDestroyed()) {
-        mainWindow.contentView.addChildView(ov);
-        layoutView();
-      }
-    } catch (_) {}
+    // overlay 现在是独立 BrowserWindow（不是 WebContentsView），它本来就浮在主窗口之上，
+    // 不会被 harnessView 盖住 —— 无需"提到顶层"。只需重新布局（同步位置）。
+    try { layoutView(); } catch (_) {}
     // 注：不再向 AI 页面下发"纯净模式开关"。bridge 侧上报已不设门控
     //（门控一旦判断错就整片静默丢弃，曾导致界面空白 + 状态卡死）；
     // 主进程在没有 harness 视图时自会丢弃事件，无需 bridge 配合。

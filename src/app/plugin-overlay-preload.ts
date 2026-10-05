@@ -25,7 +25,24 @@ const cuckooOverlay = {
   },
   /** 调试日志 */
   debugLog: (msg: string) => ipcRenderer.send('plugin-debug-log', { msg }),
+  /** 上报鼠标是否在"可交互区域"（主进程据此切鼠标穿透） */
+  setMouseHit: (hit: boolean) => ipcRenderer.send('plugin-overlay-mouse', { hit }),
 };
+
+// 定期上报"桌宠可交互元素的矩形"（主进程据此判断鼠标是否在桌宠上，切鼠标穿透）
+// 不依赖 mousemove（穿透时 overlay 收不到鼠标事件）
+setInterval(() => {
+  try {
+    // 所有带 dshp 前缀的可见元素（桌宠 UI 的根、按钮、tab、面板…）
+    const els = document.querySelectorAll('[class*="dshp"]');
+    const rects = [];
+    for (const el of els) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) rects.push([Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)]);
+    }
+    cuckooOverlay.send('overlay-hit-rects', rects);
+  } catch (_) {}
+}, 120);
 
 try {
   contextBridge.exposeInMainWorld('cuckooOverlay', cuckooOverlay);

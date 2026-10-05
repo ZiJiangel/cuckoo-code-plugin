@@ -485,6 +485,38 @@ function registerPluginIpc(): void {
     return null;
   };
 
+  // 覆盖层上报"桌宠区域矩形" → 主进程定时轮询鼠标位置，切鼠标穿透
+  let overlayRects: number[][] = [];
+  let overlayWinRef: any = null;
+  let overlayIgnore = true;
+  ipcMain.on('plugin-overlay-msg', (event: any, { channel, data }: any = {}) => {
+    if (channel === 'overlay-hit-rects') {
+      overlayRects = Array.isArray(data) ? data : [];
+      if (!overlayWinRef) overlayWinRef = findOverlayView(event);
+    }
+  });
+  // 定时轮询鼠标（200ms，够用且省）；鼠标没动则跳过，进一步省 CPU
+  let lastPtX = -1, lastPtY = -1;
+  setInterval(() => {
+    try {
+      if (!overlayWinRef || (overlayWinRef.isDestroyed && overlayWinRef.isDestroyed())) return;
+      const { screen } = require('electron');
+      const pt = screen.getCursorScreenPoint();
+      if (pt.x === lastPtX && pt.y === lastPtY) return;  // 鼠标没动 → 跳过
+      lastPtX = pt.x; lastPtY = pt.y;
+      const b = overlayWinRef.getBounds();
+      const lx = pt.x - b.x, ly = pt.y - b.y;
+      let hit = false;
+      for (const r of overlayRects) {
+        if (lx >= r[0] && lx <= r[2] && ly >= r[1] && ly <= r[3]) { hit = true; break; }
+      }
+      if (hit !== !overlayIgnore) {
+        overlayIgnore = !hit;
+        overlayWinRef.setIgnoreMouseEvents(overlayIgnore, { forward: true });
+      }
+    } catch (_) {}
+  }, 200);
+
   // 初始化覆盖层（创建/显示）
   ipcMain.handle('plugin-overlay-init', async (event: any) => {
     try {
