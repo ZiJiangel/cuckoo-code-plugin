@@ -75,6 +75,24 @@ let electronAPI: any = {
   pluginToolResult: (callId: string, result: any) => {
     return ipcRenderer.send('plugin-tool-result', { callId, result });
   },
+  /** 取系统总累计 token（主进程） */
+  getTokenTotal: () => {
+    return ipcRenderer.invoke('plugin-token-total');
+  },
+  /** 插件覆盖层：初始化（创建透明置顶视图） */
+  overlayInit: () => ipcRenderer.invoke('plugin-overlay-init'),
+  /** 插件覆盖层：在覆盖层内执行 JS */
+  overlayEval: (code: string) => ipcRenderer.invoke('plugin-overlay-eval', { code }),
+  /** 插件覆盖层：设置覆盖层 HTML */
+  overlayHtml: (html: string) => ipcRenderer.invoke('plugin-overlay-html', { html }),
+  /** 注入代码到主世界（主进程 webContents.executeJavaScript） */
+  injectMainWorld: (code: string) => {
+    return ipcRenderer.invoke('plugin-inject-main-world', { code });
+  },
+  /** 写插件调试日志（渲染进程 → 主进程文件） */
+  pluginDebugLog: (msg: string) => {
+    try { ipcRenderer.send('plugin-debug-log', { msg }); } catch (_) {}
+  },
   /** 读插件资源文件（返回 base64） */
   readPluginAsset: (pluginId: string, relPath: string) => {
     return ipcRenderer.invoke('plugin-read-asset', { pluginId, relPath });

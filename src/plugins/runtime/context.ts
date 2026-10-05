@@ -31,11 +31,22 @@ export interface HostCapabilities {
   listTools(): string[];
   /** 注册插件工具到主进程（返回注销函数） */
   registerPluginTool?(pluginName: string, tool: PluginToolDefinition): () => void;
+  /** 取 token 统计（上下文/对话/今日/窗口/系统总） */
+  getTokenStats?(): { context: number; cumulative: number; today: number; windowCumulative: number; total: number };
   /** 读 localStorage 配置 */
   getSetting(key: string): any;
   setSetting(key: string, value: any): void;
   /** 日志前缀 */
   logPrefix?: string;
+}
+
+/** 取宿主 token 统计的某项（安全兜底 0） */
+function num(host: HostCapabilities, key: string): number {
+  try {
+    const s = host.getTokenStats && host.getTokenStats();
+    if (s && typeof (s as any)[key] === 'number') return (s as any)[key];
+  } catch (_) { /* ignore */ }
+  return 0;
 }
 
 /**
@@ -114,6 +125,15 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
     tools,
     sessions,
     settings,
+
+    // token 统计（取宿主能力）
+    tokens: {
+      context: () => num(host, 'context'),
+      cumulative: () => num(host, 'cumulative'),
+      today: () => num(host, 'today'),
+      windowCumulative: () => num(host, 'windowCumulative'),
+      total: () => num(host, 'total'),
+    },
 
     on(event, listener) {
       const d = bus.on(event, listener);

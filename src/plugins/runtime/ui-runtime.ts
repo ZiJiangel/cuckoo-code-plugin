@@ -139,6 +139,45 @@ function attachUi(ctx: any, pluginName: string): void {
     },
   };
 
+  // 注入主世界（AI 页面主世界，contextIsolation 下 preload 与主世界隔离）
+  // 覆盖层（宿主层 UI，推荐插件 UI 使用）
+  (ui as any).overlay = {
+    init: () => {
+      const api = (window as any).electronAPI;
+      if (api && typeof api.overlayInit === 'function') return api.overlayInit();
+      return Promise.resolve({ success: false, error: 'overlayInit 不可用' });
+    },
+    eval: (code: string) => {
+      const api = (window as any).electronAPI;
+      if (api && typeof api.overlayEval === 'function') return api.overlayEval(code);
+      return Promise.resolve({ success: false, error: 'overlayEval 不可用' });
+    },
+    html: (html: string) => {
+      const api = (window as any).electronAPI;
+      if (api && typeof api.overlayHtml === 'function') return api.overlayHtml(html);
+      return Promise.resolve({ success: false, error: 'overlayHtml 不可用' });
+    },
+  };
+
+  (ui as any).injectMainWorld = (code: string) => {
+    const api = (window as any).electronAPI;
+    const log = (m: string) => { try { if (api && api.pluginDebugLog) api.pluginDebugLog(m); } catch (_) {} };
+    try {
+      if (api && typeof api.injectMainWorld === 'function') {
+        // 用主进程 webContents.executeJavaScript（明确主世界）
+        return api.injectMainWorld(code).then(
+          (res: any) => log('[plugin] injectMainWorld ' + (res && res.success ? '成功' : '失败: ' + (res && res.error))),
+          (err: any) => log('[plugin] injectMainWorld 失败: ' + (err && err.message ? err.message : err)),
+        );
+      }
+      // 兜底：webFrame
+      const { webFrame } = require('electron');
+      return webFrame.executeJavaScript(code);
+    } catch (e: any) {
+      log('[plugin] injectMainWorld 异常: ' + (e && e.message ? e.message : e));
+    }
+  };
+
   ctx.ui = ui;
   ctx.assets = assets;
   // 记录清理器：卸载时移除根容器

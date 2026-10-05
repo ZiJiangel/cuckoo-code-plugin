@@ -30,7 +30,7 @@ import * as windowState from '../window.js';
 import * as mcpClient from '../../mcp/client.js';
 
 const require = createRequire(import.meta.url);
-const { ipcMain, shell } = require('electron');
+const { ipcMain, shell, app } = require('electron');
 
 /** 传输层单例（无状态，可复用） */
 const httpGet = createElectronHttpGet();
@@ -212,15 +212,16 @@ function registerPluginIpc(): void {
   ipcMain.handle('plugin-sources', async () => {
     try {
       const files = getEnabledPluginDshFiles();
-      const plugins: Array<{ name: string; source: string; file: string; config?: any }> = [];
+      const plugins: Array<{ name: string; source: string; file: string; config?: any; pluginId: string }> = [];
       for (const file of files) {
         try {
           const source = fs.readFileSync(file, 'utf-8');
           const base = path.basename(file, '.js');
           // 插件目录 = dsh 的上一级
           const pluginDir = path.dirname(path.dirname(file));
+          const pluginId = path.basename(pluginDir);
           const config = readPatchConfig(pluginDir, base);
-          plugins.push({ name: base, source, file, config });
+          plugins.push({ name: base, source, file, config, pluginId });
         } catch (err: any) {
           console.error('[plugin-dsh] 读取失败:', file, err && err.message);
         }
@@ -235,12 +236,14 @@ function registerPluginIpc(): void {
   ipcMain.handle('plugin-ui-sources', async () => {
     try {
       const files = getEnabledPluginUiFiles();
-      const plugins: Array<{ name: string; source: string; file: string }> = [];
+      const plugins: Array<{ name: string; source: string; file: string; pluginId: string }> = [];
       for (const file of files) {
         try {
           const source = fs.readFileSync(file, 'utf-8');
           const base = path.basename(file, '.js');
-          plugins.push({ name: base, source, file });
+          // 插件目录 = ui 的上一级；目录名即插件 id（与 ~/.cuckoo/plugins/<id>/ 约定一致）
+          const pluginId = path.basename(path.dirname(path.dirname(file)));
+          plugins.push({ name: base, source, file, pluginId });
         } catch (err: any) {
           console.error('[plugin-ui] 读取失败:', file, err && err.message);
         }
@@ -277,6 +280,38 @@ function registerPluginIpc(): void {
     resolvePendingToolCall(callId, result);
   });
 
+  // ===== 插件调试日志（渲染进程 → 写文件，便于排查）=====
+  ipcMain.on('plugin-debug-log', (_event: any, { msg }: any = {}) => {
+    try {
+      const dir = path.join(app.getPath('userData'), '..');
+      const logFile = path.join(app.getPath('userData'), 'plugin-debug.log');
+      const line = new Date().toISOString() + ' ' + String(msg || '') + '\n';
+      fs.appendFileSync(logFile, line, 'utf-8');
+    } catch (_) { /* ignore */ }
+  });
+
+  // ===== 系统总累计 token（主进程 token-stats.json）=====
+  ipcMain.handle('plugin-token-total', async () => {
+    try {
+      const stats = await import('../token-stats.js');
+      return { success: true, total: stats.getTotal() };
+    } catch (err: any) {
+      return { success: false, total: 0, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  // ===== 注入代码到主世界（AI 页面主世界，contextIsolation 下）=====
+  ipcMain.handle('plugin-inject-main-world', async (event: any, { code }: any = {}) => {
+    try {
+      if (typeof code !== 'string') return { success: false, error: '缺少 code' };
+      // webContents.executeJavaScript 在"主世界"执行（等价 CDP）
+      await event.sender.executeJavaScript(code);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
   // ===== 读插件资源文件（供 UI 插件加载模型/图片等）=====
   // 安全：只允许读【已启用插件】目录下的文件，且防路径穿越。
   ipcMain.handle('plugin-read-asset', async (_event: any, { pluginId, relPath }: any = {}) => {
@@ -311,6 +346,80 @@ function registerPluginIpc(): void {
       const dir = getPluginsDir();
       const err = await shell.openPath(dir);
       return err ? { success: false, error: err } : { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  // ===== 插件覆盖层（overlay）：Cuckoo 自己的透明置顶视图，插件 UI 住这里 =====
+  // 让插件"不注入 AI 页面"，从根上避免污染第三方页面。
+  const findOverlayView = (event: any): any => {
+    try {
+      // 最稳：直接从窗口对象拿（ensureOverlay 把 view 挂在 win.__ckOverlayView）
+      const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+      if (mainWin && mainWin.__ckOverlayView) return mainWin.__ckOverlayView;
+      // 回退：ctx.overlayView
+      const main = windowState.getMainContext();
+      if (main && main.overlayView) return main.overlayView;
+      const all = windowState.getAllContexts ? windowState.getAllContexts() : [];
+      for (const ctx of all) {
+        if (ctx.overlayView) return ctx.overlayView;
+        if (ctx.win && ctx.win.__ckOverlayView) return ctx.win.__ckOverlayView;
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  // 初始化覆盖层（创建/显示）
+  ipcMain.handle('plugin-overlay-init', async (event: any) => {
+    try {
+      // 优先：按 event.sender 反查所属窗口
+      let ctx: any = null;
+      try {
+        const byWc = windowState.getContextByWebContents(event.sender);
+        if (byWc) ctx = byWc;
+      } catch (_) {}
+      // 回退：主窗口上下文
+      if (!ctx) { try { ctx = windowState.getMainContext(); } catch (_) {} }
+      if (!ctx) {
+        // 再回退：任意窗口
+        const all = windowState.getAllContexts ? windowState.getAllContexts() : [];
+        if (all && all.length) ctx = all[0];
+      }
+      if (!ctx) return { success: false, error: '无可用窗口' };
+      // 触发 overlay 创建（ensureOverlay 挂在 window 对象上）
+      const ensure = ctx.__ckEnsureOverlay || (ctx.win && ctx.win.__ckEnsureOverlay);
+      if (typeof ensure !== 'function') return { success: false, error: '窗口未挂 overlay 创建器' };
+      ensure();
+      // 立即回写 ctx.overlayView（ensureOverlay 里会写，但可能有延迟）
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  // 在覆盖层执行 JS（插件 UI 的真正宿主）
+  ipcMain.handle('plugin-overlay-eval', async (event: any, { code }: any = {}) => {
+    try {
+      if (typeof code !== 'string') return { success: false, error: '缺少 code' };
+      const ov = findOverlayView(event);
+      if (!ov) return { success: false, error: '覆盖层不存在' };
+      const r = await ov.webContents.executeJavaScript(code);
+      return { success: true, result: r };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  // 向覆盖层注入一段 HTML（插件 UI）
+  ipcMain.handle('plugin-overlay-html', async (event: any, { html }: any = {}) => {
+    try {
+      if (typeof html !== 'string') return { success: false, error: '缺少 html' };
+      const ov = findOverlayView(event);
+      if (!ov) return { success: false, error: '覆盖层不存在' };
+      const code = 'document.getElementById("__ck_overlay_root").innerHTML = ' + JSON.stringify(html) + ';';
+      await ov.webContents.executeJavaScript(code);
+      return { success: true };
     } catch (err: any) {
       return { success: false, error: err && err.message ? err.message : String(err) };
     }

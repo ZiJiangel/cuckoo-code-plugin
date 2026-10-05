@@ -175,6 +175,44 @@ function createWindow(profile: any) {
   });
   mainWindow.contentView.addChildView(view);
 
+  // ========== 插件覆盖层视图（透明、置顶、浮在 AI 页面之上） ==========
+  // 插件 UI（如桌宠）住在这里，不注入 AI 页面；由 ctx.ui.overlay 驱动。
+  let overlayView: any = null;
+  (mainWindow as any).__ckOverlayView = null;
+  (mainWindow as any).__ckEnsureOverlay = () => ensureOverlayView();
+  const ensureOverlayView = (): any => {
+    if (overlayView && !overlayView.webContents.isDestroyed()) return overlayView;
+    const ov = new WebContentsView({
+      webPreferences: {
+        preload: path.join(import.meta.dirname, 'plugin-overlay-preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false,
+        partition: profileData.partition,
+        transparent: true,
+        additionalArguments: ['--cuckoo-user-data=' + app.getPath('userData')],
+      },
+    });
+    mainWindow.contentView.addChildView(ov);
+    ov.setBackgroundColor('#00000000');   // 全透明
+    ov.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+    overlayView = ov;
+    (mainWindow as any).__ckOverlayView = ov;
+    // 挂到窗口上下文（overlayView 由外部 getter 暴露，这里只确保 ensure 可用）
+    {
+      const ctx: any = windowState.getWindowContext(mainWindow.id);
+      if (ctx) { ctx.__ckEnsureOverlay = () => ensureOverlayView(); }
+    }
+    // 加载覆盖层页面（内联 HTML，含插件的宿主资源桥）
+    ov.webContents.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(
+      '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}*{box-sizing:border-box}</style></head><body><div id="__ck_overlay_root"></div></body></html>'
+    ));
+    ov.webContents.on('did-finish-load', () => console.log('[Cuckoo Overlay] 页面加载完成'));
+    // 创建后主动布局一次（延迟到 ensure 返回后，确保 __ckLayout 已挂）
+    setTimeout(() => { try { (mainWindow as any).__ckLayout && (mainWindow as any).__ckLayout(); } catch (_) {} }, 50);
+    return ov;
+  };
+
   // ========== 纯净对话模式（Harness）覆盖视图（懒加载） ==========
   // 承载类 Codex 的纯净对话 UI，默认隐藏；按 Ctrl+Shift+H 或 IPC 切换。
   // AI 网页（view）继续在后台运行，仅被遮挡。
@@ -251,6 +289,15 @@ function createWindow(profile: any) {
       width: Math.max(0, w - sbw),
       height: Math.max(0, h - tbh - STATUS_HEIGHT),
     });
+    // overlay 覆盖整个"网页区域"（与 AI view 同位置）
+    const ov = (mainWindow as any).__ckOverlayView;
+    if (ov && !ov.webContents.isDestroyed()) {
+      ov.setBounds({
+        x: sbw, y: tbh,
+        width: Math.max(0, w - sbw),
+        height: Math.max(0, h - tbh - STATUS_HEIGHT),
+      });
+    }
     // harness 覆盖整个"网页区域"（与 AI view 同位置）
     const hv = (mainWindow as any).__ckHarnessView;
     if (hv && !hv.webContents.isDestroyed()) {
@@ -268,6 +315,19 @@ function createWindow(profile: any) {
   (mainWindow as any).__ckLayout = layoutView;
   layoutView();
   mainWindow.on('resize', layoutView);
+
+  // 覆盖层：把"确保创建"挂到 windowState 的 ctx（供 IPC 调用；IPC 通过 getAllContexts 拿）
+  {
+    const ctx: any = windowState.getWindowContext(mainWindow.id);
+    if (ctx) {
+      ctx.__ckEnsureOverlay = () => ensureOverlayView();
+      // 同步 overlayView 引用到 ctx（后续 ensure 创建时也会再写一次）
+      Object.defineProperty(ctx, 'overlayView', {
+        configurable: true,
+        get() { return (mainWindow as any).__ckOverlayView; },
+      });
+    }
+  }
 
   // 加载地址栏壳页面；壳就绪后主动推一次当前 URL 状态（避免与 view 加载竞态）
   mainWindow.loadFile(resolveSrc('ui/shell.html'));

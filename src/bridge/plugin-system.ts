@@ -13,6 +13,57 @@ import { sendToChat } from '../overlay/chat-input.js';
 import { getProviderByUrl } from '../providers/registry.js';
 import { onInterceptedResponse, onStream, onTaskIdle, onToolCall, onAiError } from './intercept/observer.js';
 
+/** 写调试日志（console + 文件） */
+function plog(msg: string): void {
+  try { console.log(msg); } catch (_) {}
+  try {
+    const api = (window as any).electronAPI;
+    if (api && typeof api.pluginDebugLog === 'function') api.pluginDebugLog(msg);
+  } catch (_) {}
+}
+
+/** 读 token 统计（和 overlay/events.ts 同源：localStorage） */
+function readTokenStats(): { context: number; cumulative: number; today: number; windowCumulative: number; total: number } {
+  const out = { context: 0, cumulative: 0, today: 0, windowCumulative: 0, total: 0 };
+  try {
+    // 当前会话的 context/cumulative
+    const sid = currentSessionId();
+    const cacheRaw = localStorage.getItem('cuckoo-token-cache');
+    let cache: any = {};
+    try { cache = cacheRaw ? JSON.parse(cacheRaw) : {}; } catch (_) { cache = {}; }
+    if (sid && cache[sid]) {
+      const e = cache[sid];
+      if (typeof e === 'number') { out.context = e; out.cumulative = e; }
+      else if (e && typeof e === 'object') {
+        out.context = typeof e.context === 'number' ? e.context : 0;
+        out.cumulative = typeof e.cumulative === 'number' ? e.cumulative : 0;
+      }
+    }
+    // 窗口累计 = 所有会话 cumulative 之和
+    let win = 0;
+    for (const k of Object.keys(cache)) {
+      const e = cache[k];
+      if (typeof e === 'number') win += e;
+      else if (e && typeof e.cumulative === 'number') win += e.cumulative;
+    }
+    out.windowCumulative = win;
+    // 今日 = cuckoo-token-daily 里今天
+    const dailyRaw = localStorage.getItem('cuckoo-token-daily');
+    try {
+      const daily = dailyRaw ? JSON.parse(dailyRaw) : {};
+      const now = new Date();
+      const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0');
+      const key = y + '-' + m + '-' + d;
+      if (typeof daily[key] === 'number') out.today = daily[key];
+      else if (daily[key] && typeof daily[key].value === 'number') out.today = daily[key].value;
+    } catch (_) {}
+    // 系统总累计（主进程，异步——这里先用同步缓存兜底）
+    const totRaw = localStorage.getItem('cuckoo-token-total');
+    if (totRaw) { const v = Number(totRaw); if (Number.isFinite(v)) out.total = v; }
+  } catch (_) {}
+  return out;
+}
+
 /** 从当前 URL 提取会话 id */
 function currentSessionId(): string | null {
   try {
@@ -50,6 +101,7 @@ function buildHost(): HostCapabilities {
     registerPluginTool: (pluginName: string, tool: any) => {
       return registerPluginTool(pluginName, tool);
     },
+    getTokenStats: () => readTokenStats(),
     getSetting: (key: string) => {
       try { const v = localStorage.getItem(key); return v === null ? undefined : v; } catch (_) { return undefined; }
     },
@@ -129,11 +181,17 @@ export function getPluginHost(): PluginHost {
 async function fetchSources(kind: 'dsh' | 'ui'): Promise<PendingPluginSource[]> {
   const api = (window as any).electronAPI;
   const method = kind === 'dsh' ? 'getDshPluginSources' : 'getUiPluginSources';
-  if (!api || typeof api[method] !== 'function') return [];
+  if (!api || typeof api[method] !== 'function') {
+    plog('[plugin] electronAPI.' + method + ' 不可用');
+    return [];
+  }
   try {
     const res = await api[method]();
-    if (!res || !res.success || !Array.isArray(res.plugins)) return [];
-    return res.plugins.map((p: any) => ({ name: p.name, source: p.source, kind, config: p.config }));
+    if (!res || !res.success || !Array.isArray(res.plugins)) {
+      plog('[plugin] ' + method + ' 返回异常: ' + JSON.stringify(res && res.error));
+      return [];
+    }
+    return res.plugins.map((p: any) => ({ name: p.name, source: p.source, kind, config: p.config, pluginId: p.pluginId }));
   } catch (err: any) {
     console.error('[plugin] 拉取 ' + kind + ' 插件失败:', err && err.message ? err.message : err);
     return [];
@@ -160,17 +218,19 @@ export async function initPlugins(): Promise<void> {
   const uiSources = await fetchSources('ui');
   const all = [...dshSources, ...uiSources];
 
+  plog('[plugin] 拉到插件源码 ' + all.length + ' 个: ' + all.map((x) => x.kind + ':' + x.name).join(', '));
+
   if (all.length === 0) {
-    console.log('[plugin] 没有已启用的 DSH/UI 插件');
+    plog('[plugin] 没有已启用的 DSH/UI 插件');
     return;
   }
 
   const result = h.loadAll(all);
   const stats = h.stats();
-  console.log('[plugin] 已加载:', result.loaded.join(', ') || '(无)');
-  console.log('[plugin] 统计:', JSON.stringify(stats));
+  plog('[plugin] 已加载: ' + (result.loaded.join(', ') || '(无)'));
+  plog('[plugin] 统计: ' + JSON.stringify(stats));
   if (result.failed.length > 0) {
-    console.error('[plugin] 加载失败:', result.failed.map((f) => f.name + ': ' + f.error).join(' | '));
+    plog('[plugin] 加载失败: ' + result.failed.map((f) => f.name + ': ' + f.error).join(' | '));
   }
 
   // 暴露到 window，供控制台调试 / UI 调用

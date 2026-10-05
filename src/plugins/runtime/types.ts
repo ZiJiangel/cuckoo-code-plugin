@@ -144,11 +144,38 @@ export interface DshContext {
     onResize(cb: (w: number, h: number) => void): () => void;
     injectScript(text: string): void;
     injectScriptSrc(src: string): void;
+    /** 注入代码到主世界（AI 页面，contextIsolation 下的正确层） */
+    injectMainWorld(code: string): void;
+    /**
+     * 覆盖层：Cuckoo 自己的透明置顶视图，浮在 AI 页面之上。
+     * 插件 UI（如桌宠）推荐住这里——不碰 AI 页面，页面保持干净。
+     */
+    overlay?: {
+      /** 初始化/创建覆盖层（懒加载） */
+      init(): Promise<any>;
+      /** 在覆盖层内执行 JS（异步，返回结果） */
+      eval(code: string): Promise<any>;
+      /** 设置覆盖层 HTML */
+      html(html: string): Promise<any>;
+    };
   };
   /** 插件资源访问（仅 UI 插件有）：读插件目录文件 / blob URL */
   assets?: {
     read(relPath: string): Promise<Uint8Array>;
     url(relPath: string): Promise<string>;
+  };
+  /** token 统计（对齐 Cuckoo 状态栏口径） */
+  tokens?: {
+    /** 当前上下文 token */
+    context(): number;
+    /** 对话累计 token */
+    cumulative(): number;
+    /** 今日累计 token */
+    today(): number;
+    /** 窗口累计 token */
+    windowCumulative(): number;
+    /** 系统总累计 token */
+    total(): number;
   };
 }
 

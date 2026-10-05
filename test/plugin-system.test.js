@@ -657,3 +657,37 @@ describe('T7/T8 插件 config（来自 cordis.patch.yml）', () => {
     expect(got).toEqual(cfg);
   });
 });
+
+
+describe('内置服务 inject 必须能触发 apply（根因修复）', () => {
+  it('inject [agents] 时 apply 立即执行（内置服务视为就绪）', () => {
+    let applied = false;
+    const reg = new ServiceRegistryImpl();
+    const mod = {
+      name: 'builtin-inject',
+      inject: ['agents'],
+      apply() { applied = true; },
+    };
+    const host = {
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => null,
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    };
+    loadPluginModule(mod, host, undefined, reg);
+    // agents 是内置服务，应视为就绪，apply 立即跑
+    expect(applied).toBe(true);
+  });
+
+  it('inject 自定义未就绪服务时仍推迟', () => {
+    let applied = false;
+    const reg = new ServiceRegistryImpl();
+    const mod = { name: 'custom-inject', inject: ['not-ready'], apply() { applied = true; } };
+    const host = {
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => null,
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    };
+    loadPluginModule(mod, host, undefined, reg);
+    expect(applied).toBe(false);
+    reg.provide('not-ready', {});
+    expect(applied).toBe(true);
+  });
+});

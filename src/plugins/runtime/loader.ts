@@ -144,16 +144,20 @@ export function loadPluginModule(mod: DshPluginModule, host: HostCapabilities, c
     }
   };
 
-  if (registry && inject.length > 0) {
-    // 检查所有 inject 服务是否就绪
-    const missing = inject.filter((svc) => !registry.has(svc));
+  // 内置服务：ctx 自带，始终就绪（不必注册到 registry）
+  const BUILTIN_SERVICES = new Set(['agents', 'tools', 'sessions', 'settings']);
+  const needsWait = inject.filter((svc) => !BUILTIN_SERVICES.has(svc));
+
+  if (registry && needsWait.length > 0) {
+    // 检查所有 inject 服务是否就绪（内置服务除外）
+    const missing = needsWait.filter((svc) => !registry.has(svc));
     if (missing.length > 0) {
       // 有未就绪的服务：注册 onReady，全部就绪后 apply
       let ready = false;
       const cleanups: Array<() => void> = [];
       const tryApply = (): void => {
         if (ready) return;
-        const stillMissing = inject.filter((svc) => !registry.has(svc));
+        const stillMissing = needsWait.filter((svc) => !registry.has(svc));
         if (stillMissing.length > 0) return;
         ready = true;
         for (const c of cleanups) { try { c(); } catch (_) {} }

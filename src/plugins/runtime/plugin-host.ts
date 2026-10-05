@@ -47,6 +47,8 @@ export interface PendingPluginSource {
   kind: PluginKind;
   /** 插件配置（来自 cordis.patch.yml） */
   config?: any;
+  /** 插件 id（= 安装目录名，用于资源访问路径匹配） */
+  pluginId?: string;
 }
 
 /**
@@ -106,10 +108,12 @@ export class PluginHost {
     }
     try {
       const isUi = source.kind === 'ui';
+      // 资源访问用"插件 id"（安装目录名），而非文件名
+      const assetId = source.pluginId || source.name;
       const plugin = loadPluginSource(
         source.source, this.host, source.name, source.config, this.registry,
-        // UI 插件：在 apply 之前附加 ctx.ui
-        isUi ? (ctx) => attachUi(ctx, source.name) : undefined,
+        // UI 插件：在 apply 之前附加 ctx.ui（用 assetId 作为资源标识）
+        isUi ? (ctx) => attachUi(ctx, assetId) : undefined,
       );
       this.records.set(plugin.name, {
         name: plugin.name,
