@@ -17,7 +17,7 @@ describe('参考实现 - 桌宠 UI 插件', () => {
     global.setTimeout = () => 0;
     global.clearTimeout = () => {};
 
-    const src = fs.readFileSync(path.join(__dirname, '..', '..', '示例插件', 'whale-pet-demo.js'), 'utf-8');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'examples', 'whale-pet-demo.js'), 'utf-8');
     const host = new PluginHost({
       sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
       listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},

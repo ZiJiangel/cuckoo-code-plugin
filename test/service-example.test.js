@@ -7,7 +7,7 @@ import { PluginHost } from '../src/plugins/runtime/plugin-host.js';
 describe('服务提供/消费示例', () => {
   it('consumer 等到 provider 的服务就绪', () => {
     global.document = { createElement: () => ({ style: {}, appendChild: () => {}, setAttribute: () => {}, isConnected: true }), getElementById: () => null, body: { appendChild: () => {} }, head: { appendChild: () => {} } };
-    const base = path.join(__dirname, '..', '..', '示例插件');
+    const base = path.join(__dirname, '..', 'examples');
     const provSrc = fs.readFileSync(path.join(base, 'service-provider.js'), 'utf-8');
     const consSrc = fs.readFileSync(path.join(base, 'service-consumer.js'), 'utf-8');
 
