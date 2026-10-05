@@ -72,17 +72,33 @@ function escapeHtml(s: string): string {
 }
 
 export function initPluginShell(): void {
+  const wlog: any = (window as any);
+  wlog.__shellMountLog = wlog.__shellMountLog || { received: [], pulled: null };
   try {
     const apiAny: any = api as any;
     if (apiAny && typeof apiAny.onPluginShellMount === 'function') {
       apiAny.onPluginShellMount((m: MountSpec) => {
         try {
+          wlog.__shellMountLog.received.push(m && m.target + ':' + (m && m.id));
           if (!m || !m.target) return;
           if (m.target === 'statusbar') mountStatusbar(m);
           else if (m.target === 'toolbar') mountToolbar(m);
           else if (m.target === 'sidebar') mountSidebar(m);
         } catch (_) {}
       });
+    }
+    if (apiAny && typeof apiAny.listPluginShellMounts === 'function') {
+      apiAny.listPluginShellMounts().then((r: any) => {
+        wlog.__shellMountLog.pulled = r;
+        if (!r || !r.success || !Array.isArray(r.mounts)) return;
+        for (const m of r.mounts) {
+          try {
+            if (m.target === 'statusbar') mountStatusbar(m);
+            else if (m.target === 'toolbar') mountToolbar(m);
+            else if (m.target === 'sidebar') mountSidebar(m);
+          } catch (_) {}
+        }
+      }).catch(() => {});
     }
   } catch (_) {}
 }

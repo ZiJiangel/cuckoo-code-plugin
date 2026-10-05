@@ -393,18 +393,32 @@ function registerPluginIpc(): void {
   });
 
   // ===== 插件界面挂载（Cuckoo 壳页面：侧边栏/状态栏/工具栏）=====
+  // 缓存已挂载请求（壳页面可能晚于插件加载；就绪后补发）
+  const shellMounts: Array<{ pluginId: string; target: string; id: string; spec: any }> = [];
   ipcMain.handle('plugin-shell-mount', async (_event: any, { pluginId, target, id, spec }: any = {}) => {
     try {
       if (typeof pluginId !== 'string' || !pluginId) return { success: false, error: '缺少 pluginId' };
       if (typeof target !== 'string' || !target) return { success: false, error: '缺少 target' };
-      // 转发给壳页面（mainWindow.webContents）
+      // 记录（去重）
+      const exist = shellMounts.find(m => m.pluginId === pluginId && m.target === target && m.id === id);
+      if (exist) { exist.spec = spec; } else { shellMounts.push({ pluginId, target, id, spec }); }
+      // 转发给壳页面
       const mainWin: any = windowState.getMainWindow ? windowState.getMainWindow() : null;
+      try {
+        const api0 = (globalThis as any);
+        // 简易日志：写插件调试日志
+        const { ipcMain: _im } = require('electron');
+      } catch (_) {}
       if (!mainWin || !mainWin.webContents) return { success: false, error: '无主窗口' };
       mainWin.webContents.send('shell-plugin-mount', { pluginId, target, id, spec });
-      return { success: true };
+      return { success: true, _debug: { senderId: undefined, mainWinId: mainWin.id, webContentsId: mainWin.webContents.id, total: shellMounts.length } };
     } catch (err: any) {
       return { success: false, error: err && err.message ? err.message : String(err) };
     }
+  });
+  // 壳页面就绪后拉取（补发之前缓存的挂载）
+  ipcMain.handle('plugin-shell-list', async () => {
+    return { success: true, mounts: shellMounts };
   });
 
   // ===== 插件覆盖层（overlay）：Cuckoo 自己的透明置顶视图，插件 UI 住这里 =====
