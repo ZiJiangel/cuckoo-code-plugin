@@ -88,6 +88,19 @@ const shellAPI = {
   onSessionsChanged: (cb: () => void) => {
     ipcRenderer.on('shell-sessions-changed', () => cb());
   },
+  // ========== 自绘标题栏：窗口控制 ==========
+  windowMinimize: () => ipcRenderer.invoke('shell-window-minimize'),
+  windowMaximize: () => ipcRenderer.invoke('shell-window-maximize'),
+  windowClose: () => ipcRenderer.invoke('shell-window-close'),
+  windowIsMaximized: () => ipcRenderer.invoke('shell-window-is-maximized'),
+  // ========== 主题 ==========
+  themeGet: () => ipcRenderer.invoke('theme-get'),
+  themeSet: (id: string) => ipcRenderer.invoke('theme-set', { id }),
+  themeList: () => ipcRenderer.invoke('theme-list'),
+  themeSubscribe: () => ipcRenderer.invoke('theme-subscribe'),
+  onThemeChanged: (cb: (snapshot: any) => void) => {
+    ipcRenderer.on('theme-changed', (_e: any, snap: any) => cb(snap));
+  },
   // ========== 技能 ==========
   listSkills: () => ipcRenderer.invoke('list-skills'),
   // ========== 子代理 ==========

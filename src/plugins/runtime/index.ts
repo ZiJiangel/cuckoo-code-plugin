@@ -50,5 +50,14 @@ export type { PatchInsert, PatchParseResult } from './patch.js';
 export { ServiceRegistryImpl, serviceRegistry } from './service-registry.js';
 export type { ServiceRegistryInternal } from './service-registry.js';
 
+// ===== 主题系统（对标 DSH ui-theme）=====
+export { ThemeRuntime, DEFAULT_PREFERENCE, BUILTIN_THEMES } from './theme-runtime.js';
+export type {
+  ThemeService, ThemeSnapshot, ThemeDefinition, ThemeTokens,
+  ThemeTokenModes, ThemeTokenOverrides, ThemePreference,
+} from './theme-runtime.js';
+export { getThemeService, resetThemeService } from './theme-service.js';
+export { createThemeProxy } from './theme-proxy.js';
+
 export { PluginHost, diagnose } from './plugin-host.js';
 export type { PluginKind, PluginRecord, LoadFailure, PendingPluginSource } from './plugin-host.js';

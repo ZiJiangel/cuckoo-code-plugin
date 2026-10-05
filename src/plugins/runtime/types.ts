@@ -215,6 +215,11 @@ export interface PluginContext {
     /** 系统总累计 token */
     total(): number;
   };
+  /**
+   * 主题服务（对标 DSH ctx.theme）：注册/切换主题、叠加 token 覆盖层。
+   * 全应用共享一份注册表；变化时所有插件的 ctx.on('theme/change') 都会收到。
+   */
+  theme: import('./theme-runtime.js').ThemeService;
 }
 
 /** 子作用域：隔离的 effect 生命周期 */

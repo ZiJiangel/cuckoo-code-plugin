@@ -30,31 +30,29 @@
     --ck-danger: #e5484d;
     --ck-green: #30a46c;
   }
-  /* ===== 深色（跟随系统）===== */
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --ck-bg: #16181d;
-      --ck-bg-sub: #191c22;
-      --ck-toolbar: #191c22;
-      --ck-surface: rgba(255, 255, 255, 0.045);
-      --ck-surface-hover: rgba(255, 255, 255, 0.08);
-      --ck-border: rgba(255, 255, 255, 0.08);
-      --ck-border-strong: rgba(255, 255, 255, 0.14);
-      --ck-primary: #6b83ff;
-      --ck-primary-strong: #8b9dff;
-      --ck-primary-soft: rgba(107, 131, 255, 0.16);
-      --ck-text: #e4e6eb;
-      --ck-text-2: #a8adba;
-      --ck-text-dim: #757b8a;
-      --ck-hover-bg: rgba(255, 255, 255, 0.13);
-      --ck-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-      --ck-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
-      --ck-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.35);
-      --ck-scroll-thumb: rgba(255, 255, 255, 0.14);
-      --ck-scroll-hover: rgba(255, 255, 255, 0.24);
-      --ck-danger: #ff6369;
-      --ck-green: #46b47e;
-    }
+  /* ===== 深色（由主题 presenter 设 body[data-ck-dark]）===== */
+  body[data-ck-dark] {
+    --ck-bg: #16181d;
+    --ck-bg-sub: #191c22;
+    --ck-toolbar: #191c22;
+    --ck-surface: rgba(255, 255, 255, 0.045);
+    --ck-surface-hover: rgba(255, 255, 255, 0.08);
+    --ck-border: rgba(255, 255, 255, 0.08);
+    --ck-border-strong: rgba(255, 255, 255, 0.14);
+    --ck-primary: #6b83ff;
+    --ck-primary-strong: #8b9dff;
+    --ck-primary-soft: rgba(107, 131, 255, 0.16);
+    --ck-text: #e4e6eb;
+    --ck-text-2: #a8adba;
+    --ck-text-dim: #757b8a;
+    --ck-hover-bg: rgba(255, 255, 255, 0.13);
+    --ck-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --ck-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+    --ck-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --ck-scroll-thumb: rgba(255, 255, 255, 0.14);
+    --ck-scroll-hover: rgba(255, 255, 255, 0.24);
+    --ck-danger: #ff6369;
+    --ck-green: #46b47e;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -212,6 +210,53 @@
   .ck-tab { display: none; flex-direction: column; gap: 14px; }
   .ck-tab.ck-tab-active { display: flex; }
   .ck-placeholder { color: var(--ck-text-dim); font-size: 12px; text-align: center; padding: 20px 0; }
+
+  /* ===== 自绘标题栏：拖拽区 + 窗口控制按钮 ===== */
+  .toolbar {
+    -webkit-app-region: drag;
+  }
+  .toolbar button,
+  .toolbar input,
+  .toolbar .url-wrap,
+  .toolbar .ck-win-controls {
+    -webkit-app-region: no-drag;
+  }
+  .ck-win-divider {
+    margin-left: auto;
+  }
+  .ck-win-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 6px;
+    flex-shrink: 0;
+  }
+  .ck-win-btn {
+    width: 34px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ck-text-2);
+    cursor: pointer;
+    transition: background .14s, color .14s;
+  }
+  .ck-win-btn svg {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
+  .ck-win-btn:hover {
+    background: var(--ck-surface-hover);
+    color: var(--ck-text);
+  }
+  .ck-win-close:hover {
+    background: #e5484d;
+    color: #fff;
+  }
 
 /* ===== 卡片 ===== */
   .ck-card {
@@ -967,6 +1012,18 @@
       <button class="nav-btn" id="btn-home" title="新建对话">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
+      <div class="divider ck-win-divider"></div>
+      <div class="ck-win-controls">
+        <button class="ck-win-btn" id="ck-win-min" title="最小化">
+          <svg viewBox="0 0 12 12"><rect x="2" y="5.5" width="8" height="1"/></svg>
+        </button>
+        <button class="ck-win-btn" id="ck-win-max" title="最大化">
+          <svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor"/></svg>
+        </button>
+        <button class="ck-win-btn ck-win-close" id="ck-win-close" title="关闭">
+          <svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="main-area">
@@ -1388,6 +1445,17 @@
 
             <!-- ===== 设置 ===== -->
             <div class="ck-tab" data-panel="settings">
+              <div class="ck-card">
+                <div class="ck-set-group-title">外观</div>
+                <div class="ck-set-field">
+                  <span class="ck-set-key">主题</span>
+                  <select class="ck-set-input" id="st-theme-select">
+                    <option value="system">跟随系统</option>
+                    <option value="light">浅色</option>
+                    <option value="dark">深色</option>
+                  </select>
+                </div>
+              </div>
               <div class="ck-card">
                 <div class="ck-set-group-title">失败自动重试</div>
                 <div class="ck-set-field ck-set-toggle">
@@ -1835,6 +1903,18 @@
       return;
     }
     if (api.home) api.home();
+  });
+  var btnWinMin = document.getElementById("ck-win-min");
+  var btnWinMax = document.getElementById("ck-win-max");
+  var btnWinClose = document.getElementById("ck-win-close");
+  if (btnWinMin) btnWinMin.addEventListener("click", () => {
+    if (api.windowMinimize) api.windowMinimize();
+  });
+  if (btnWinClose) btnWinClose.addEventListener("click", () => {
+    if (api.windowClose) api.windowClose();
+  });
+  if (btnWinMax) btnWinMax.addEventListener("click", () => {
+    if (api.windowMaximize) api.windowMaximize();
   });
 
   // src/ui/shell/scripts/platform.ts
@@ -3379,6 +3459,50 @@
     } catch (_) {
     }
   });
+  var themeSelect = document.getElementById("st-theme-select");
+  var THEME_BUILTINS = [
+    ["system", "\u8DDF\u968F\u7CFB\u7EDF"],
+    ["light", "\u6D45\u8272"],
+    ["dark", "\u6DF1\u8272"]
+  ];
+  function fillThemeOptions(registered) {
+    if (!themeSelect) return;
+    const opts = THEME_BUILTINS.slice();
+    for (const t of registered || []) {
+      if (t && t.id && t.id !== "light" && t.id !== "dark") opts.push([t.id, t.id]);
+    }
+    const cur = themeSelect.value;
+    themeSelect.innerHTML = opts.map(([v, label]) => '<option value="' + v + '">' + label + "</option>").join("");
+    if (cur) themeSelect.value = cur;
+  }
+  function renderThemeSelect() {
+    const anyApi = api;
+    if (!themeSelect || typeof anyApi.themeGet !== "function") return;
+    anyApi.themeGet().then((r) => {
+      if (r && r.success && r.snapshot) {
+        fillThemeOptions(r.snapshot.themes);
+        themeSelect.value = r.snapshot.preference || "system";
+      }
+    }).catch(() => {
+    });
+    if (typeof anyApi.onThemeChanged === "function") {
+      anyApi.onThemeChanged((snap) => {
+        if (!snap) return;
+        fillThemeOptions(snap.themes);
+        if (themeSelect) themeSelect.value = snap.preference || "system";
+      });
+    }
+  }
+  if (themeSelect) {
+    themeSelect.addEventListener("change", () => {
+      const anyApi = api;
+      if (typeof anyApi.themeSet === "function") {
+        anyApi.themeSet(themeSelect.value).catch(() => {
+        });
+      }
+    });
+    renderThemeSelect();
+  }
 
   // src/ui/shell/scripts/pages/conversations.ts
   var harnessBusy = false;
@@ -3880,6 +4004,50 @@
     }
   }
 
+  // src/ui/shell/scripts/theme-presenter.ts
+  var DARK_ATTRIBUTE = "data-ck-dark";
+  var THEME_SOURCE_ATTRIBUTE = "data-ck-theme-source";
+  var appliedTokens = [];
+  function applyTheme(snapshot) {
+    if (!snapshot || !snapshot.active) return;
+    const scheme = snapshot.active.colorScheme;
+    document.documentElement.style.colorScheme = scheme;
+    document.documentElement.setAttribute(
+      THEME_SOURCE_ATTRIBUTE,
+      snapshot.preference === "system" ? "system" : scheme
+    );
+    const body = document.body;
+    if (scheme === "dark") body.setAttribute(DARK_ATTRIBUTE, "");
+    else body.removeAttribute(DARK_ATTRIBUTE);
+    for (const name of appliedTokens) body.style.removeProperty(name);
+    appliedTokens = [];
+    for (const [name, value] of Object.entries(snapshot.active.tokens || {})) {
+      body.style.setProperty(name, value);
+      appliedTokens.push(name);
+    }
+  }
+  function initThemePresenter() {
+    const anyApi = api;
+    if (typeof anyApi.onThemeChanged === "function") {
+      anyApi.onThemeChanged((snap) => {
+        try {
+          applyTheme(snap);
+        } catch (_) {
+        }
+      });
+    }
+    if (typeof anyApi.themeGet === "function") {
+      anyApi.themeGet().then((r) => {
+        if (r && r.success && r.snapshot) applyTheme(r.snapshot);
+      }).catch(() => {
+      });
+    }
+    if (typeof anyApi.themeSubscribe === "function") {
+      anyApi.themeSubscribe().catch(() => {
+      });
+    }
+  }
+
   // src/ui/shell/scripts/main.ts
   registerTab("workspaces", loadWorkspaces);
   registerTab("files", loadFiles);
@@ -3912,6 +4080,10 @@
   }
   try {
     initPluginShell();
+  } catch (_) {
+  }
+  try {
+    initThemePresenter();
   } catch (_) {
   }
   function reportShellSize() {

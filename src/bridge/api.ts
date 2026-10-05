@@ -57,6 +57,17 @@ let electronAPI: any = {
   getUiPluginSources: () => {
     return ipcRenderer.invoke('plugin-ui-sources');
   },
+  // ========== 主题（IPC 代理到主进程权威） ==========
+  themeGet: () => ipcRenderer.invoke('theme-get'),
+  themeSet: (id: string) => ipcRenderer.invoke('theme-set', { id }),
+  themeList: () => ipcRenderer.invoke('theme-list'),
+  themeRegister: (definition: any) => ipcRenderer.invoke('theme-register', { definition }),
+  themeOverride: (source: string, tokens: any) => ipcRenderer.invoke('theme-override', { source, tokens }),
+  themeDispose: (token: string) => ipcRenderer.invoke('theme-dispose', { token }),
+  themeSubscribe: () => ipcRenderer.invoke('theme-subscribe'),
+  onThemeChanged: (cb: (snapshot: any) => void) => {
+    ipcRenderer.on('theme-changed', (_e: any, snap: any) => cb(snap));
+  },
   /** 注册插件工具到主进程 */
   registerPluginTool: (info: any) => {
     return ipcRenderer.invoke('plugin-tool-register', info);

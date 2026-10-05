@@ -15,6 +15,7 @@ import { registerSettingsIpc } from './settings.js';
 import { registerFeishuIpc } from './feishu.js';
 import { registerPluginIpc } from './plugin.js';
 import { registerWebServerIpc } from './webserver.js';
+import { registerThemeIpc } from './theme.js';
 
 function registerIpcHandlers(): void {
   registerProjectIpc();
@@ -30,6 +31,7 @@ function registerIpcHandlers(): void {
   registerFeishuIpc();
   registerPluginIpc();
   registerWebServerIpc();
+  registerThemeIpc();
 }
 
 export { registerIpcHandlers };

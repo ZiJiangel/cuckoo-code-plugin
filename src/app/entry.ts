@@ -137,6 +137,8 @@ function createWindow(profile: any) {
   const mainWindow = new BrowserWindow({
     width: defaultBounds.width,
     height: defaultBounds.height,
+    // 自绘标题栏：隐藏系统边框，顶部工具栏兼任拖拽区（主题可完全定制）
+    frame: false,
     // 最小尺寸：保证工具栏(46)+状态栏(28)+内容区都放得下（防止恢复成过小窗口导致状态栏被挤出）
     minWidth: 480,
     minHeight: 240,
@@ -153,6 +155,18 @@ function createWindow(profile: any) {
       additionalArguments: ['--cuckoo-user-data=' + app.getPath('userData')],
     },
   });
+
+  // 无边框窗口：最大化时按当前显示器工作区设置 bounds，避免盖住任务栏（Windows 已知问题）
+  try {
+    const applyWorkArea = () => {
+      if (!mainWindow.isMaximized()) return;
+      const { screen } = require('electron');
+      const disp = screen.getDisplayMatching(mainWindow.getBounds());
+      mainWindow.setBounds(disp.workArea);
+    };
+    mainWindow.on('maximize', () => { try { applyWorkArea(); } catch (_) {} });
+    mainWindow.on('unmaximize', () => { try { mainWindow.setBounds(mainWindow.getBounds()); } catch (_) {} });
+  } catch (_) { /* ignore */ }
 
   // 子代理配置：序列化后经 additionalArguments 传给 bridge（供子代理窗口自识别）
   const subagentArg = profileData.subagentConfig

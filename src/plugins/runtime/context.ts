@@ -12,6 +12,7 @@
  * 不直接 import 上层模块（遵守 docs/arch 依赖铁律）。
  */
 import { EventBus } from './events.js';
+import { createThemeProxy } from './theme-proxy.js';
 import type {
   PluginContext, AgentsService, AgentHandle, ToolsService, SessionsService, SettingsService,
   ServiceRegistry, PluginScope, PluginToolDefinition,
@@ -167,6 +168,9 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
       windowCumulative: () => num(host, 'windowCumulative'),
       total: () => num(host, 'total'),
     },
+
+    // 主题服务（IPC 代理到主进程权威，对标 DSH ctx.theme）
+    theme: createThemeProxy(),
 
     on(event, listener) {
       const d = bus.on(event, listener);
