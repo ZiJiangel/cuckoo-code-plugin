@@ -118,7 +118,7 @@ async function loadInstalledPlugins(): Promise<void> {
             sw +
           '</div>' +
           '<div class="ck-plugin-actions">' +
-            (p.hasConfig ? '<button class="ck-snip-icon-btn" data-config="' + escapeAttr(p.id) + '" title="配置">⚙</button>' : '') +
+            (p.hasConfig ? '<button class="ck-snip-icon-btn" data-config="' + escapeAttr(p.id) + '" title="配置">⚙</button>' : '<span class="ck-snip-icon-btn ck-snip-icon-placeholder" aria-hidden="true"></span>') +
             '<button class="ck-snip-icon-btn danger" data-uninstall="' + escapeAttr(p.id) + '" title="卸载">' +
               ICON_TRASH +
             '</button>' +
