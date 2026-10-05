@@ -127,6 +127,21 @@ async function showUpdateErrorDialog(error: any, isManual: boolean): Promise<boo
 
 /** 手动检查更新入口 */
 async function checkForUpdates(): Promise<void> {
+  // 插件改造版：禁用更新（原版更新包会覆盖本分支）
+  const parent0 = mainWindowRef && !mainWindowRef.isDestroyed() ? mainWindowRef : null;
+  const opts0 = {
+    type: 'info' as const,
+    title: '插件改造版',
+    message: '本版本已禁用原版自动更新',
+    detail: '这是带插件系统的改造版，为避免被原版更新覆盖，已停用在线更新。请从改造版渠道获取新版。',
+    buttons: ['知道了'],
+  };
+  try {
+    if (parent0) await dialog.showMessageBox(parent0, opts0);
+    else await dialog.showMessageBox(opts0);
+  } catch (_) { /* ignore */ }
+  return;
+  // eslint-disable-next-line no-unreachable
   if (updateDownloaded) {
     // 已有下载完成的更新，直接提示安装
     const options = {
@@ -255,22 +270,11 @@ autoUpdater.on('error', async (error: any) => {
 });
 
 // ========== 启动时自动检查 ==========
+// 注意：本分支（plugin-ui-ext）是插件改造版，**禁用原版自动更新**——
+// 原版更新包会覆盖本分支（丢失插件系统），故不从上游检查/安装更新。
 function initAutoUpdater(win: any): void {
   setMainWindow(win);
-
-  // 仅在生产环境（打包后）才检查更新
-  if (!app.isPackaged) {
-    console.log('[Updater] 开发环境，跳过自动检查更新');
-    return;
-  }
-
-  // 应用启动后延迟 5 秒检查，避免影响启动速度
-  setTimeout(() => {
-    console.log('[Updater] 启动自动检查更新');
-    autoUpdater.checkForUpdates().catch((error: any) => {
-      console.error('[Updater] 启动检查更新失败:', error);
-    });
-  }, 5000);
+  console.log('[Updater] 插件改造版：已禁用原版自动更新');
 }
 
 export {

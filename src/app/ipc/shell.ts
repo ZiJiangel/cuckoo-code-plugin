@@ -236,6 +236,8 @@ function registerShellIpc(): void {
   ipcMain.handle('get-app-info', async () => {
     let version = '';
     try { version = app.getVersion(); } catch (_) {}
+    // 插件改造版：版本号加分支后缀（区别于原版）
+    if (version) version = version + '-plugin-ui-ext';
     return { success: true, version };
   });
 
