@@ -366,3 +366,48 @@
 363: _本规范是 Cuckoo 插件系统的正式文档。新增能力必须同步更新本文档。_
 364: 
 365: 
+
+
+### 4.9 本地 HTTP 服务（ctx.webServer）
+
+把插件目录暴露成 URL —— 这是「厚插件」的门槛（如模型/图片/静态页）。
+
+| API | 说明 |
+|-----|------|
+| ctx.webServer.serve(prefix, dir) | 把插件目录 dir 暴露到 URL 前缀 prefix；返回 base URL |
+| ctx.webServer.info() | 取服务基础 URL + 端口 |
+
+```js
+export async function apply(ctx) {
+  const r = await ctx.webServer.serve('/assets', 'assets');
+  // → http://127.0.0.1:<port>/plugins/<id>/assets/*
+  ctx.log('资源地址: ' + r.url);
+}
+```
+
+**特性**：
+- 只绑 127.0.0.1（不对外）
+- 只允许**已启用插件**
+- **路径防穿越**（`..` 拒绝）
+- 支持常见 MIME（js/json/png/moc3/wasm/mp3/字体…）
+- 跨域头 Access-Control-Allow-Origin: *
+
+### 4.10 Cuckoo 界面挂载（ctx.ui.shell）
+
+把插件 UI **集成进 Cuckoo 壳页面**（不是覆盖层，是「长在里面」）。
+
+| API | 说明 |
+|-----|------|
+| ctx.ui.shell.addSidebarPanel({ id, title, icon?, html? }) | 侧边栏加一页 |
+| ctx.ui.shell.addStatusItem({ id, text, title? }) | 状态栏加一项 |
+| ctx.ui.shell.addToolbarButton({ id, label, title? }) | 工具栏加按钮 |
+
+```js
+export function apply(ctx) {
+  ctx.ui.shell.addStatusItem({ id: 'my-count', text: '0 条', title: '我的插件统计' });
+  ctx.ui.shell.addToolbarButton({ id: 'my-btn', label: '✦', title: '我的功能' });
+}
+```
+
+> **区别**：ctx.ui.shell 是「集成进 Cuckoo」，ctx.ui.overlay 是「浮在 Cuckoo 之上」。
+> 改 Cuckoo 自己的界面用 shell；浮层/桌宠用 overlay。
