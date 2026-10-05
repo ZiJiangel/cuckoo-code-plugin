@@ -10,11 +10,35 @@
  *   - plugins/runtime/theme-runtime.ts 是平台无关纯逻辑，两处共用
  *   - 本文件是主进程权威实例；渲染进程不自己建注册表
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { ThemeRuntime } from '../../plugins/runtime/theme-runtime.js';
 import type { ThemeSnapshot, ThemeDefinition, ThemeTokenOverrides } from '../../plugins/runtime/theme-runtime.js';
+import { getUserHome } from '../../infra/portable-data.js';
 import * as windowState from '../window.js';
 
 let runtime: ThemeRuntime | null = null;
+
+// ===== 偏好持久化（对齐 DSH：偏好存盘，退出不丢）=====
+interface ThemeState { preference?: string }
+function getStateFile(): string {
+  return path.join(getUserHome(), 'theme-state.json');
+}
+function readPreference(): string | null {
+  try {
+    const file = getStateFile();
+    if (!fs.existsSync(file)) return null;
+    const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    return raw && typeof raw.preference === 'string' ? raw.preference : null;
+  } catch { return null; }
+}
+function writePreference(preference: string): void {
+  try {
+    const file = getStateFile();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ preference }, null, 2), 'utf-8');
+  } catch { /* ignore */ }
+}
 /** 订阅者：窗口 webContents，变化时推快照 */
 const subscribers = new Set<any>();
 
@@ -35,6 +59,11 @@ function getTheme(): ThemeRuntime {
     clear() {},
   };
   runtime = new ThemeRuntime(bus as any);
+  // 读回上次保存的偏好（若合法）
+  const saved = readPreference();
+  if (saved) {
+    try { runtime.setTheme(saved); } catch { /* 未注册的旧主题，忽略 */ }
+  }
   return runtime;
 }
 
@@ -67,6 +96,7 @@ function broadcastSnapshot(snap: ThemeSnapshot): void {
 // ===== 供 IPC 调用的操作 =====
 function setTheme(id: string): ThemeSnapshot {
   getTheme().setTheme(id);
+  writePreference(id);
   return snapshot();
 }
 function register(definition: ThemeDefinition): string {

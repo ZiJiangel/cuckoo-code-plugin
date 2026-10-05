@@ -90,6 +90,8 @@ export class ThemeRuntime {
   /** 覆盖层：source → { seq, tokens }；seq 是叠加顺序 */
   private readonly overrides = new Map<string, { seq: number; tokens: ThemeTokenOverrides }>();
   private overrideSeq = 0;
+  /** 想切但尚未注册的主题（等 register 时自动应用） */
+  private pendingPreference: ThemePreference | null = null;
 
   constructor(bus: EventBus) {
     this.bus = bus;
@@ -123,8 +125,12 @@ export class ThemeRuntime {
    */
   setTheme(id: string): void {
     if (id !== 'system' && !this.themes.some((t) => t.id === id)) {
-      throw new Error('主题 "' + id + '" 未注册');
+      // 目标主题尚未注册（常见于启动时读回插件主题，但插件还没加载）——
+      // 记进 pending，等该主题 register 时自动应用，不抛错丢失偏好。
+      this.pendingPreference = id as ThemePreference;
+      return;
     }
+    this.pendingPreference = null;
     if (this.preference === id) return;
     this.preference = id as ThemePreference;
     this.publish();
@@ -151,6 +157,11 @@ export class ThemeRuntime {
       tokens: Object.freeze({ ...(definition.tokens || {}) }),
     });
     this.themes = [...this.themes, def];
+    // 若之前有待定偏好指向本主题（启动时读回插件主题），现在应用它
+    if (this.pendingPreference === def.id) {
+      this.pendingPreference = null;
+      this.preference = def.id as ThemePreference;
+    }
     this.publish();
     return () => {
       if (!this.themes.some((t) => t.id === definition.id)) return;
