@@ -162,19 +162,55 @@ export function apply(ctx) {
 
 ### 4.6 UI（仅 ui 类插件）
 
-| API | 说明 |
-|-----|------|
-| `ctx.ui.mount(el)` | 挂载 DOM 到 AI 页面 |
-| `ctx.ui.root()` | 取根容器 |
-| `ctx.ui.css(text)` | 注入样式 |
-| `ctx.ui.onResize(cb)` | 监听尺寸变化 |
-| `ctx.ui.injectScript(text)` | 注入脚本（页内） |
-| `ctx.ui.injectScriptSrc(src)` | 注入外部脚本 |
-| `ctx.ui.injectMainWorld(code)` | **注入到主世界**（跨 contextIsolation） |
+> ⚠️ **安全提示**：`mount / css / injectScript / injectMainWorld` 都作用于 **AI 页面**（deepseek.com）。
+> 往第三方页面注入内容**可能被风控检测**，**不推荐**。
+> **UI 插件请优先用 `ctx.ui.overlay`**（下一节）——它住在 Cuckoo 自己的视图里，**不碰 AI 页面**。
+
+| API | 说明 | 位置 |
+|-----|------|------|
+| `ctx.ui.mount(el)` | 挂载 DOM | AI 页面 |
+| `ctx.ui.root()` | 取根容器 | AI 页面 |
+| `ctx.ui.css(text)` | 注入样式 | AI 页面 |
+| `ctx.ui.onResize(cb)` | 监听尺寸变化 | AI 页面 |
+| `ctx.ui.injectScript(text)` | 注入脚本（页内） | AI 页面 |
+| `ctx.ui.injectScriptSrc(src)` | 注入外部脚本 | AI 页面 |
+| `ctx.ui.injectMainWorld(code)` | 注入主世界（**谨慎**） | AI 页面主世界 |
 
 > **关键**：`contextIsolation: true` 下，preload 与主世界隔离。
 > 需要在 AI 页面主世界运行的代码（如 `window.fetch` 拦截、DOM 操作），
-> **必须用 `ctx.ui.injectMainWorld`**，不能用 preload 的 `window`。
+> 必须用 `ctx.ui.injectMainWorld`——但**它会污染 AI 页面，谨慎使用**。
+
+### 4.7 覆盖层（推荐给 UI 插件）
+
+Cuckoo 提供一个**透明、置顶、浮在 AI 页面之上**的覆盖层视图。
+插件 UI（桌宠、悬浮窗、面板）**应该住这里**，而不是注入 AI 页面。
+
+| API | 说明 |
+|-----|------|
+| `ctx.ui.overlay.init()` | 初始化/创建覆盖层（懒加载） |
+| `ctx.ui.overlay.eval(code)` | 在覆盖层内执行 JS，返回结果 |
+| `ctx.ui.overlay.html(html)` | 设置覆盖层 HTML |
+
+```js
+export function apply(ctx) {
+  ctx.ui.overlay.init().then(() => {
+    ctx.ui.overlay.eval(`document.body.innerHTML = '<div id="my-widget">hello</div>';`);
+  });
+}
+```
+
+**覆盖层里的 preload 提供 `window.cuckooOverlay`**：
+
+| API | 说明 |
+|-----|------|
+| `cuckooOverlay.readAsset(pluginId, relPath)` | 读插件资源（宿主读文件，不经网络） |
+| `cuckooOverlay.send(channel, data)` | 向宿主发消息 |
+| `cuckooOverlay.onMessage(cb)` | 订阅宿主消息 |
+| `cuckooOverlay.debugLog(msg)` | 写插件调试日志 |
+
+> **注意**：覆盖层是独立页面，**没有网络、没有 base URL**。
+> 需要资源时用 `cuckooOverlay.readAsset`（经宿主读取），不要直接 `fetch` 相对路径。
+> **层叠**：覆盖层 > AI 页面（透明）；bounds 跟随 AI 内容区。
 
 ### 4.7 资源（仅 ui 类插件）
 
@@ -325,3 +361,4 @@ export function apply(ctx) {
 ---
 
 _本规范是 Cuckoo 插件系统的正式文档。新增能力必须同步更新本文档。_
+

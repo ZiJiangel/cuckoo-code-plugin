@@ -691,3 +691,107 @@ describe('内置服务 inject 必须能触发 apply（根因修复）', () => {
     expect(applied).toBe(true);
   });
 });
+
+
+describe('ctx.ui.overlay（插件覆盖层能力）', () => {
+  function mockDom() {
+    global.document = {
+      createElement: () => ({ id: '', style: {}, setAttribute: () => {}, appendChild: () => {}, isConnected: true, textContent: '', src: '' }),
+      getElementById: () => null,
+      body: { appendChild: () => {} },
+      head: { appendChild: () => {} },
+    };
+    global.window = {
+      addEventListener: () => {}, removeEventListener: () => {},
+      innerWidth: 800, innerHeight: 600,
+      electronAPI: undefined,
+    };
+    global.Blob = class {};
+    global.URL = { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} };
+    global.atob = (s) => Buffer.from(s, 'base64').toString('binary');
+  }
+
+  it('UI 插件拿到 ctx.ui.overlay（三个方法）', () => {
+    mockDom();
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ui-ov', kind: 'ui', source: `export const name = 'ui-ov'; export function apply(ctx) {}` });
+    const c = host.getContext('ui-ov');
+    expect(!!(c.ui && c.ui.overlay)).toBe(true);
+    expect(typeof c.ui.overlay.init).toBe('function');
+    expect(typeof c.ui.overlay.eval).toBe('function');
+    expect(typeof c.ui.overlay.html).toBe('function');
+  });
+
+  it('overlay.init：electronAPI 不可用时优雅返回，不抛', async () => {
+    mockDom();
+    global.window.electronAPI = undefined;
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ui-ov2', kind: 'ui', source: `export const name = 'ui-ov2'; export function apply(ctx) {}` });
+    const c = host.getContext('ui-ov2');
+    const r = await c.ui.overlay.init();
+    expect(r && r.success).toBe(false);
+    expect(typeof r.error).toBe('string');
+  });
+
+  it('overlay.init：有 electronAPI 时透传结果', async () => {
+    mockDom();
+    let called = 0;
+    global.window.electronAPI = {
+      overlayInit: async () => { called++; return { success: true }; },
+      overlayEval: async (code) => { called++; return { success: true, result: code }; },
+      overlayHtml: async (html) => { called++; return { success: true }; },
+    };
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ui-ov3', kind: 'ui', source: `export const name = 'ui-ov3'; export function apply(ctx) {}` });
+    const c = host.getContext('ui-ov3');
+    const r = await c.ui.overlay.init();
+    expect(r.success).toBe(true);
+    expect(called).toBe(1);
+  });
+
+  it('overlay.eval：把 code 透传给 electronAPI 并返回结果', async () => {
+    mockDom();
+    let gotCode = null;
+    global.window.electronAPI = {
+      overlayInit: async () => ({ success: true }),
+      overlayEval: async (code) => { gotCode = code; return { success: true, result: 42 }; },
+      overlayHtml: async () => ({ success: true }),
+    };
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ui-ov4', kind: 'ui', source: `export const name = 'ui-ov4'; export function apply(ctx) {}` });
+    const c = host.getContext('ui-ov4');
+    const r = await c.ui.overlay.eval('1 + 1');
+    expect(gotCode).toBe('1 + 1');
+    expect(r.result).toBe(42);
+  });
+
+  it('overlay.html：把 html 透传', async () => {
+    mockDom();
+    let gotHtml = null;
+    global.window.electronAPI = {
+      overlayInit: async () => ({ success: true }),
+      overlayEval: async () => ({ success: true }),
+      overlayHtml: async (html) => { gotHtml = html; return { success: true }; },
+    };
+    const host = new PluginHost({
+      sendToChat: async () => true, getCurrentSessionId: () => 's', getProjectDir: () => 'D:/p',
+      listSessions: () => [], listTools: () => [], getSetting: () => undefined, setSetting: () => {},
+    });
+    host.load({ name: 'ui-ov5', kind: 'ui', source: `export const name = 'ui-ov5'; export function apply(ctx) {}` });
+    const c = host.getContext('ui-ov5');
+    await c.ui.overlay.html('<div>x</div>');
+    expect(gotHtml).toBe('<div>x</div>');
+  });
+});
