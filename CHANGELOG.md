@@ -1,5 +1,63 @@
 # Changelog
 
+> 说明：`0.0.x` 为**插件改造版**（基于原版 fork，独立版本号），`0.8.x` 为原版。
+
+## [0.0.3] - 2026-10-06
+
+### Added
+- **插件系统（对标 DSH）**：函数/对象/类三种插件形态、5 种事件派发（emit/parallel/serial/bail/waterfall）、
+  服务 provide/inject、可逆副作用（effect/scope）、资源（assets）、工具注册（tools.register）、
+  agents/sessions 核心映射、配置（plugin.json config schema + 用户值）。
+- **主题系统（对标 DSH ui-theme）**：`ctx.theme`（register / overrideTokens / setTheme / getTheme / list + theme/change）；
+  主进程权威 + 渲染进程 IPC 代理；`--ck-*` token 体系；自绘标题栏（frame:false）；设置页「外观」分区（主题下拉）；
+  主题持久化（`home/theme-state.json`）；AI 页面跟随主题（nativeTheme，不侵入 DS 页面）+ 纯净模式跟随。
+- **UI 能力（原子）**：`ctx.ui.overlay`（覆盖层）、`ctx.ui.shell.addStyle`（注入壳页面 CSS，对标 DSH styles.insert）、
+  `ctx.ui.setWebViewVisible`（控制 DS 视图显隐）、`ctx.ui.setWindowMaterial`（Win11 窗口材质）、
+  **`ctx.ui.slot`（通用槽位，对标 DSH slots）**、`ctx.ui.shell.addSidebarPanel/addStatusItem/addToolbarButton`。
+- **事件**：`harness/change`（纯净模式切换）、`theme/change`（主题变化）。
+- 示例插件：桌宠（Live2D，覆盖层方案）、主题范本、壁纸、界面示例（槽位+命令）。
+
+### Changed
+- 独立版本号 `0.0.x`（区别于原版 0.8.x），界面显示 `0.0.3-plugin-ui-ext`。
+- **禁用原版自动更新**（避免被上游覆盖、丢失插件系统）。
+- 插件系统原则：**基座只给原子能力 + 事件，效果由插件组合**（对标 DSH）。
+
+### Fixed
+- 主题持久化（退出重开记住主题；含"读回时插件主题未注册"的时序问题）。
+- 跟随系统时壳页面与 DS 页面深浅不一致（主进程用 nativeTheme 作系统配色来源）。
+- 纯净模式跟随主题（harness 变量引用 --ck-* + 深色回退）。
+- 切纯净模式再切回后顶栏点不了（harness 视图未归零 → 显式隐藏）。
+- 插件列表开关对齐（无配置时占位 ⚙）。
+- 主题下拉展开白底白字（select 跟随 color-scheme）。
+- 命令触发（裸 id 匹配 `插件名::id`）；状态栏项支持动态更新。
+
+### 打包 / 开发
+- 打包离线模式（`ELECTRON_BUILDER_OFFLINE=true`）避免联网卡；快速更新用「只重打 asar」。
+- 开发数据目录 `_devdata`（`CUCKOO_DATA_ROOT`，重打包不清）；`开发启动.bat` 一键启动。
+
+## [0.0.2] - 2026-10-05
+
+### Added
+- 插件系统 P0：ctx.webServer（本地 HTTP 静态资源）+ ctx.ui.shell（界面挂载点）。
+- 插件系统 P1：ctx.command（命令）+ 插件配置 UI（plugin.json config schema + 弹窗）。
+- 插件覆盖层 ctx.ui.overlay（安全 host 层 UI，不注入 AI 页面）+ 桌宠移植（Live2D）。
+- 便携数据目录（Cuckoo-Data 与 exe 同级，可分享）；飞书 AI 回复改交互卡片（Markdown）。
+
+### Changed
+- 命名规范化 Dsh* → Plugin*（保留别名）；定位改为「Cuckoo 原生插件系统」。
+
+### Fixed
+- 覆盖层改透明 BrowserWindow（鼠标穿透）；桌宠叠加；纯净模式崩溃；壳页面挂载时序。
+
+## [0.0.1] - 2026-10-05
+
+### Added
+- 插件系统基座：三种形态（函数/对象/类）、5 种事件派发、服务 provide/inject、effect/scope、
+  ctx.assets、ctx.tools.register、agents/sessions 核心映射、cordis.patch.yml 配置、加载错误诊断。
+
+### Infrastructure
+- 便携数据目录 + 隔离数据目录（与原版共存）；插件运行时零外部依赖。
+
 ## [0.8.8] - 2026-10-04
 
 ### Added
