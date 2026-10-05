@@ -62,6 +62,7 @@ let electronAPI: any = {
   shellStyleRemove: (pluginId: string) => ipcRenderer.invoke('plugin-shell-style-remove', { pluginId }),
   setWebViewVisible: (visible: boolean) => ipcRenderer.invoke('plugin-set-webview-visible', { visible }),
   setWindowMaterial: (material: string) => ipcRenderer.invoke('plugin-set-window-material', { material }),
+  onHarnessModeChanged: (cb: (data: any) => void) => { ipcRenderer.on('harness-mode-changed', (_e: any, d: any) => cb(d)); },
   shellBackground: (pluginId: string, url: string | null, overlay?: string) => ipcRenderer.invoke('plugin-shell-background', { pluginId, url, overlay }),
   // ========== 主题（IPC 代理到主进程权威） ==========
   themeGet: () => ipcRenderer.invoke('theme-get'),

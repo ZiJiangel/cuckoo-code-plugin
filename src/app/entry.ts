@@ -424,6 +424,8 @@ function createWindow(profile: any) {
     // 主进程在没有 harness 视图时自会丢弃事件，无需 bridge 配合。
     // 通知壳页面：更新「纯净模式/原版模式」按钮
     try { mainWindow.webContents.send('shell-harness-mode', { harness: next }); } catch (_) {}
+    // 通知 AI 页面（插件运行处）→ 广播 harness/change 给插件
+    try { view.webContents.send('harness-mode-changed', { harness: next }); } catch (_) {}
   };
 
   // 更新主窗口引用

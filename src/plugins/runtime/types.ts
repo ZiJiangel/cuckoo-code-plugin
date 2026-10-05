@@ -196,8 +196,7 @@ export interface PluginContext {
     setWebViewVisible(visible: boolean): Promise<any>;
     /** 设主窗口材质（Win11 亚克力/Mica；'acrylic'|'mica'|'tabbed'|'none'） */
     setWindowMaterial(material: string): Promise<any>;
-    /** 设背景图（基座负责对齐壳页面 + 纯净模式）；返回 disposer 清除 */
-    background(url: string | null, overlay?: string): () => void;
+
   };
   /**
    * 本地 HTTP 服务：把插件目录暴露成 URL（"厚插件"的门槛）。

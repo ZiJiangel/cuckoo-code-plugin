@@ -59,6 +59,13 @@ export interface CuckooEventSource {
 }
 
 export function bindCuckooEvents(src: CuckooEventSource): () => void {
+  // 纯净模式切换 → 广播 harness/change 给插件（插件据此自己隐/显 DS 视图）
+  try {
+    const api = (typeof window !== 'undefined') ? (window as any).electronAPI : null;
+    if (api && typeof api.onHarnessModeChanged === 'function') {
+      api.onHarnessModeChanged((data: any) => broadcast('harness/change', data || {}));
+    }
+  } catch (_) { /* ignore */ }
   const d1 = src.onInterceptedResponse((text, meta) => {
     const tokenUsage = meta && meta.tokenUsage ? meta.tokenUsage : null;
     // DSH 标准事件：session/event（持久事实）+ agent/turn-end（控制）

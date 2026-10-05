@@ -50,8 +50,7 @@ interface UiFacade {
   setWebViewVisible?(visible: boolean): Promise<any>;
   /** 设主窗口材质（Win11 亚克力/Mica） */
   setWindowMaterial?(material: string): Promise<any>;
-  /** 设背景图（基座负责对齐壳页面 + 纯净模式）；返回 disposer 清除 */
-  background?(url: string | null, overlay?: string): () => void;
+
   /** 覆盖层（Cuckoo 自己的视图，推荐 UI 插件使用） */
   overlay?: {
     init(): Promise<any>;
@@ -143,20 +142,6 @@ function attachUi(ctx: any, pluginName: string): void {
       const api = (window as any).electronAPI;
       if (api && typeof api.setWindowMaterial === 'function') return api.setWindowMaterial(material);
       return Promise.resolve({ success: false, error: 'setWindowMaterial 不可用' });
-    },
-    /**
-     * 设背景图（基座负责对齐壳页面 + 纯净模式）。
-     * @param url 图片 URL（null = 清除）
-     * @param overlay 遮罩色
-     * @returns disposer（清除背景）
-     */
-    background(url: string | null, overlay?: string) {
-      const api = (window as any).electronAPI;
-      if (api && typeof api.shellBackground === 'function') {
-        api.shellBackground(pluginName, url, overlay).catch(() => {});
-        return () => { try { api.shellBackground(pluginName, null).catch(() => {}); } catch (_) {} };
-      }
-      return () => {};
     },
   };
 
