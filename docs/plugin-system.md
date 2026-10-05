@@ -411,3 +411,24 @@ export function apply(ctx) {
 
 > **区别**：ctx.ui.shell 是「集成进 Cuckoo」，ctx.ui.overlay 是「浮在 Cuckoo 之上」。
 > 改 Cuckoo 自己的界面用 shell；浮层/桌宠用 overlay。
+
+
+### 4.11 插件配置（用户可改）
+
+插件在 `plugin.json` 里声明 `config` schema，用户可在 Cuckoo「插件」页点 ⚙ 修改。
+
+```json
+{
+  "id": "my-plugin",
+  "name": "我的插件",
+  "config": {
+    "height": { "type": "number", "label": "高度", "default": 180, "min": 80, "max": 400 },
+    "talk": { "type": "boolean", "label": "说话动嘴", "default": true },
+    "name": { "type": "string", "label": "名字", "default": "鲸鱼娘" }
+  }
+}
+```
+
+**用户值**存在 `~/.cuckoo/plugins-config.json`，`apply(ctx, config)` 时合并进 `config`。
+
+字段类型：`string` / `number` / `boolean`（可选 `label` / `description` / `default` / `min` / `max`）。
