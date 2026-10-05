@@ -162,6 +162,8 @@ function registerPluginIpc(): void {
         repo: (p.origin && p.origin.repo) || '',
         installedAt: (p.origin && p.origin.installedAt) || '',
         installedVersion: (p.origin && p.origin.version) || '',
+        // 是否有配置 schema（决定是否显示"配置"按钮）
+        hasConfig: !!(p.manifest.config && Object.keys(p.manifest.config).length > 0),
       }));
       return { success: true, plugins };
     } catch (err: any) {
@@ -220,7 +222,15 @@ function registerPluginIpc(): void {
           // 插件目录 = dsh 的上一级
           const pluginDir = path.dirname(path.dirname(file));
           const pluginId = path.basename(pluginDir);
-          const config = readPatchConfig(pluginDir, base);
+          // cordis.patch.yml 的 config + 用户配置（后者优先）
+          let config = readPatchConfig(pluginDir, base);
+          try {
+            const { getPluginConfig } = await import('../../plugins/plugins-config.js');
+            const userCfg = getPluginConfig(pluginId);
+            if (userCfg && Object.keys(userCfg).length > 0) {
+              config = Object.assign({}, config || {}, userCfg);
+            }
+          } catch (_) {}
           plugins.push({ name: base, source, file, config, pluginId });
         } catch (err: any) {
           console.error('[plugin-dsh] 读取失败:', file, err && err.message);
@@ -236,14 +246,20 @@ function registerPluginIpc(): void {
   ipcMain.handle('plugin-ui-sources', async () => {
     try {
       const files = getEnabledPluginUiFiles();
-      const plugins: Array<{ name: string; source: string; file: string; pluginId: string }> = [];
+      const plugins: Array<{ name: string; source: string; file: string; pluginId: string; config?: any }> = [];
       for (const file of files) {
         try {
           const source = fs.readFileSync(file, 'utf-8');
           const base = path.basename(file, '.js');
           // 插件目录 = ui 的上一级；目录名即插件 id（与 ~/.cuckoo/plugins/<id>/ 约定一致）
           const pluginId = path.basename(path.dirname(path.dirname(file)));
-          plugins.push({ name: base, source, file, pluginId });
+          // 用户配置（plugins-config.json），供 apply(ctx, config) 用
+          let config: any = undefined;
+          try {
+            const { getPluginConfig } = await import('../../plugins/plugins-config.js');
+            config = getPluginConfig(pluginId);
+          } catch (_) {}
+          plugins.push({ name: base, source, file, pluginId, config });
         } catch (err: any) {
           console.error('[plugin-ui] 读取失败:', file, err && err.message);
         }
@@ -251,6 +267,35 @@ function registerPluginIpc(): void {
       return { success: true, plugins };
     } catch (err: any) {
       return { success: false, plugins: [], error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  // ===== 插件配置（用户改，壳页面用）=====
+  // 取某插件的配置 schema（来自 plugin.json 的 config）+ 当前值
+  ipcMain.handle('plugin-config-get', async (_event: any, { pluginId }: any = {}) => {
+    try {
+      if (!pluginId) return { success: false, error: '缺少 pluginId' };
+      const plugins = listInstalledPlugins();
+      const target = plugins.find((p: any) => p.manifest && p.manifest.id === pluginId);
+      if (!target) return { success: false, error: '插件不存在: ' + pluginId };
+      const schema = target.manifest.config || {};
+      const { getPluginConfig } = await import('../../plugins/plugins-config.js');
+      const values = getPluginConfig(pluginId, schema);
+      return { success: true, schema, values };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+
+  // 存某插件的配置
+  ipcMain.handle('plugin-config-set', async (_event: any, { pluginId, values }: any = {}) => {
+    try {
+      if (!pluginId) return { success: false, error: '缺少 pluginId' };
+      const { setPluginConfig } = await import('../../plugins/plugins-config.js');
+      const ok = setPluginConfig(pluginId, values || {});
+      return { success: ok, error: ok ? undefined : '写入失败' };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
     }
   });
 

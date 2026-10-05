@@ -31,6 +31,23 @@ export interface PluginManifest {
   author?: string;
   /** 声明兼容的最低应用版本（仅提示，v1 不强制拦截） */
   minAppVersion?: string;
+  /** 配置项声明（用户可在界面里改；键 → 描述） */
+  config?: Record<string, PluginConfigField>;
+}
+
+/** 一个配置项的描述 */
+export interface PluginConfigField {
+  /** 类型：string / number / boolean */
+  type: 'string' | 'number' | 'boolean';
+  /** 显示名 */
+  label?: string;
+  /** 默认值 */
+  default?: any;
+  /** 说明 */
+  description?: string;
+  /** 数字的范围（可选） */
+  min?: number;
+  max?: number;
 }
 
 /** 安装后扫描出的实际贡献项（派生，非声明） */

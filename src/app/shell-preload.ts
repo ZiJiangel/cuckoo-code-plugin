@@ -53,6 +53,9 @@ const shellAPI = {
   },
   // 拉取"已缓存的插件挂载"（壳页面就绪后补渲染）
   listPluginShellMounts: () => ipcRenderer.invoke('plugin-shell-list'),
+  // 插件配置
+  pluginConfigGet: (pluginId: string) => ipcRenderer.invoke('plugin-config-get', { pluginId }),
+  pluginConfigSet: (pluginId: string, values: any) => ipcRenderer.invoke('plugin-config-set', { pluginId, values }),
   // 壳页面上报真实可视尺寸（供主进程精确布局 WebContentsView，避免菜单栏高度误差）
   reportShellSize: (w: number, h: number) => ipcRenderer.send('shell-report-size', { w, h }),
   // ========== 窗口管理 ==========

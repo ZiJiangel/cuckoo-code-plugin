@@ -79,6 +79,10 @@ let electronAPI: any = {
   getTokenTotal: () => {
     return ipcRenderer.invoke('plugin-token-total');
   },
+  /** 插件配置：取 schema + 当前值 */
+  pluginConfigGet: (pluginId: string) => ipcRenderer.invoke('plugin-config-get', { pluginId }),
+  /** 插件配置：保存 */
+  pluginConfigSet: (pluginId: string, values: any) => ipcRenderer.invoke('plugin-config-set', { pluginId, values }),
   /** 插件命令：注册 */
   commandRegister: (info: any) => ipcRenderer.invoke('plugin-command-register', info),
   /** 插件命令：注销 */
