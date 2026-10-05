@@ -101,6 +101,9 @@ function buildHost(): HostCapabilities {
     registerPluginTool: (pluginName: string, tool: any) => {
       return registerPluginTool(pluginName, tool);
     },
+    registerPluginCommand: (pluginName: string, cmd: any) => {
+      return registerPluginCommand(pluginName, cmd);
+    },
     getTokenStats: () => readTokenStats(),
     getSetting: (key: string) => {
       try { const v = localStorage.getItem(key); return v === null ? undefined : v; } catch (_) { return undefined; }
@@ -115,6 +118,30 @@ function buildHost(): HostCapabilities {
 /** 已注册的插件工具（toolId → execute） */
 const pluginTools = new Map<string, (args: any) => any>();
 let toolListenerBound = false;
+
+/** 已注册的插件命令（commandId → run 函数） */
+const pluginCommands = new Map<string, () => any>();
+let commandListenerBound = false;
+
+/** 绑定"主进程触发插件命令"的监听（只绑一次） */
+function bindCommandInvokeListener(): void {
+  if (commandListenerBound) return;
+  commandListenerBound = true;
+  const api = (window as any).electronAPI;
+  if (!api || typeof api.onCommandInvoke !== 'function') return;
+  api.onCommandInvoke((payload: any) => {
+    const { commandId, runId } = payload || {};
+    const fn = pluginCommands.get(commandId);
+    if (!fn) {
+      api.commandResult(runId, { success: false, error: '命令未注册: ' + commandId });
+      return;
+    }
+    Promise.resolve()
+      .then(() => fn())
+      .then((result) => api.commandResult(runId, { success: true, result }))
+      .catch((err) => api.commandResult(runId, { success: false, error: err && err.message ? err.message : String(err) }));
+  });
+}
 
 /** 绑定"主进程调用插件工具"的监听（只绑一次） */
 function bindToolInvokeListener(): void {
@@ -163,6 +190,27 @@ function registerPluginTool(pluginName: string, tool: any): () => void {
     pluginTools.delete(toolId);
     if (typeof api.unregisterPluginTool === 'function') {
       api.unregisterPluginTool(toolId).catch(() => {});
+    }
+  };
+}
+
+/**
+ * 注册一个插件命令（渲染进程侧）：主进程触发时，通过 plugin-command-invoke 回调执行 run
+ */
+function registerPluginCommand(pluginName: string, cmd: any): () => void {
+  const api = (window as any).electronAPI;
+  if (!api || typeof api.commandRegister !== 'function') {
+    console.warn('[plugin] commandRegister 不可用，命令未注册: ' + (cmd && cmd.id));
+    return () => {};
+  }
+  bindCommandInvokeListener();
+  const commandId = pluginName + '::' + (cmd.id || '');
+  pluginCommands.set(commandId, cmd.run || (() => {}));
+  api.commandRegister({ commandId, pluginName, title: cmd.title || cmd.id }).catch(() => {});
+  return () => {
+    pluginCommands.delete(commandId);
+    if (typeof api.commandUnregister === 'function') {
+      api.commandUnregister(commandId).catch(() => {});
     }
   };
 }

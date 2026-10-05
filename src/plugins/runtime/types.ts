@@ -197,6 +197,11 @@ export interface PluginContext {
     /** 取服务基础 URL（不含插件路径） */
     info(): Promise<{ success: boolean; base?: string; port?: number; error?: string }>;
   };
+  /** 注册命令（对齐 DSH 的命令/快捷操作能力） */
+  command?: {
+    /** 注册一个命令，返回注销函数 */
+    register(cmd: { id: string; title: string; run: () => any }): () => void;
+  };
   /** token 统计（对齐 Cuckoo 状态栏口径） */
   tokens?: {
     /** 当前上下文 token */

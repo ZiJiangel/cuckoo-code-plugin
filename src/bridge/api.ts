@@ -79,6 +79,22 @@ let electronAPI: any = {
   getTokenTotal: () => {
     return ipcRenderer.invoke('plugin-token-total');
   },
+  /** 插件命令：注册 */
+  commandRegister: (info: any) => ipcRenderer.invoke('plugin-command-register', info),
+  /** 插件命令：注销 */
+  commandUnregister: (commandId: string) => ipcRenderer.invoke('plugin-command-unregister', { commandId }),
+  /** 插件命令：列表 */
+  commandList: () => ipcRenderer.invoke('plugin-command-list'),
+  /** 插件命令：触发 */
+  commandInvoke: (commandId: string) => ipcRenderer.invoke('plugin-command-invoke', { commandId }),
+  /** 插件命令：回传执行结果 */
+  commandResult: (runId: string, result: any) => ipcRenderer.send('plugin-command-result', { runId, result }),
+  /** 插件命令：订阅触发（渲染进程收到后执行） */
+  onCommandInvoke: (cb: (payload: any) => void) => {
+    const handler = (_e: any, payload: any) => cb(payload);
+    ipcRenderer.on('plugin-command-invoke', handler);
+    return () => ipcRenderer.removeListener('plugin-command-invoke', handler);
+  },
   /** 插件界面挂载：往 Cuckoo 壳页面（侧边栏/状态栏/工具栏）挂 UI */
   shellMount: (pluginId: string, target: string, id: string, spec: any) => {
     return ipcRenderer.invoke('plugin-shell-mount', { pluginId, target, id, spec });

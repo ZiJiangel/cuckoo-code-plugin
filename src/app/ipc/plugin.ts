@@ -351,6 +351,47 @@ function registerPluginIpc(): void {
     }
   });
 
+  // ===== 插件命令（ctx.command）=====
+  ipcMain.handle('plugin-command-register', async (event: any, info: any = {}) => {
+    try {
+      const { registerCommandFromRenderer } = await import('../plugin-commands.js');
+      return registerCommandFromRenderer(event.sender, info);
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+  ipcMain.handle('plugin-command-unregister', async (_event: any, { commandId }: any = {}) => {
+    try {
+      const { unregisterCommand } = await import('../plugin-commands.js');
+      unregisterCommand(commandId);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+  ipcMain.handle('plugin-command-list', async () => {
+    try {
+      const { listCommands } = await import('../plugin-commands.js');
+      return { success: true, commands: listCommands() };
+    } catch (err: any) {
+      return { success: false, commands: [], error: err && err.message ? err.message : String(err) };
+    }
+  });
+  ipcMain.handle('plugin-command-invoke', async (_event: any, { commandId }: any = {}) => {
+    try {
+      const { invokeCommand } = await import('../plugin-commands.js');
+      return await invokeCommand(commandId);
+    } catch (err: any) {
+      return { success: false, error: err && err.message ? err.message : String(err) };
+    }
+  });
+  ipcMain.on('plugin-command-result', (_event: any, { runId, result }: any = {}) => {
+    try {
+      // 动态 import 拿 resolve
+      import('../plugin-commands.js').then((m) => m.resolvePendingCommandRun(runId, result)).catch(() => {});
+    } catch (_) {}
+  });
+
   // ===== 插件界面挂载（Cuckoo 壳页面：侧边栏/状态栏/工具栏）=====
   ipcMain.handle('plugin-shell-mount', async (_event: any, { pluginId, target, id, spec }: any = {}) => {
     try {

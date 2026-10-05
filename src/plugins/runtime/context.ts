@@ -31,6 +31,8 @@ export interface HostCapabilities {
   listTools(): string[];
   /** 注册插件工具到主进程（返回注销函数） */
   registerPluginTool?(pluginName: string, tool: PluginToolDefinition): () => void;
+  /** 注册插件命令 */
+  registerPluginCommand?(pluginName: string, cmd: { id: string; title: string; run: () => any }): () => void;
   /** 取 token 统计（上下文/对话/今日/窗口/系统总） */
   getTokenStats?(): { context: number; cumulative: number; today: number; windowCumulative: number; total: number };
   /** 读 localStorage 配置 */
@@ -99,6 +101,18 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
     },
   };
 
+  // ===== 命令（ctx.command）=====
+  const command: { register(cmd: { id: string; title: string; run: () => any }): () => void } = {
+    register(cmd) {
+      if (!cmd || typeof cmd.id !== 'string' || !cmd.id) throw new Error('命令必须有 id');
+      if (typeof cmd.run !== 'function') throw new Error('命令必须有 run 函数');
+      if (host.registerPluginCommand) {
+        return host.registerPluginCommand(name, cmd);
+      }
+      return () => {};
+    },
+  };
+
   // ===== 服务：sessions =====
   const sessions: SessionsService = {
     current: () => ({ id: host.getCurrentSessionId(), projectDir: host.getProjectDir() }),
@@ -123,6 +137,7 @@ function createContext(name: string, host: HostCapabilities, registry?: ServiceR
 
     agents,
     tools,
+    command,
     sessions,
     settings,
 
