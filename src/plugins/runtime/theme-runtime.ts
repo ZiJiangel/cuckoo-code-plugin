@@ -93,8 +93,12 @@ export class ThemeRuntime {
   /** 想切但尚未注册的主题（等 register 时自动应用） */
   private pendingPreference: ThemePreference | null = null;
 
-  constructor(bus: EventBus) {
+  /** 系统配色提供者（主进程注入 nativeTheme；缺省用 matchMedia）*/
+  private readonly systemSchemeProvider?: () => 'light' | 'dark';
+
+  constructor(bus: EventBus, systemSchemeProvider?: () => 'light' | 'dark') {
     this.bus = bus;
+    this.systemSchemeProvider = systemSchemeProvider;
     this.media = typeof matchMedia === 'undefined'
       ? undefined
       : matchMedia('(prefers-color-scheme: dark)');
@@ -189,9 +193,17 @@ export class ThemeRuntime {
     };
   }
 
+  /** 解析系统配色：优先用注入的 provider（主进程 nativeTheme），否则用 matchMedia */
+  private resolveSystemScheme(): 'light' | 'dark' {
+    if (this.systemSchemeProvider) {
+      try { return this.systemSchemeProvider() === 'dark' ? 'dark' : 'light'; } catch { /* fall through */ }
+    }
+    return this.media?.matches === true ? 'dark' : 'light';
+  }
+
   private buildSnapshot(): ThemeSnapshot {
     const resolvedId = this.preference === 'system'
-      ? (this.media?.matches === true ? 'dark' : 'light')
+      ? this.resolveSystemScheme()
       : this.preference;
     const active = this.themes.find((t) => t.id === resolvedId);
     if (active === undefined) {

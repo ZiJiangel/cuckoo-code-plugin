@@ -61,7 +61,23 @@ function getTheme(): ThemeRuntime {
     async waterfall(v: any) { return v; },
     clear() {},
   };
-  runtime = new ThemeRuntime(bus as any);
+  // 系统配色提供者：主进程 nativeTheme（主进程无 matchMedia）
+  const sysProvider = (): 'light' | 'dark' => {
+    try {
+      const nt = require('electron').nativeTheme;
+      return nt && nt.shouldUseDarkColors ? 'dark' : 'light';
+    } catch { return 'light'; }
+  };
+  runtime = new ThemeRuntime(bus as any, sysProvider);
+  // 系统配色变化时（偏好为 system）重新发布
+  try {
+    const nt = require('electron').nativeTheme;
+    if (nt && typeof nt.on === 'function') {
+      nt.on('updated', () => {
+        try { if (runtime && runtime.getTheme().preference === 'system') (runtime as any).publish(); } catch (_) {}
+      });
+    }
+  } catch (_) { /* ignore */ }
   // 读回上次保存的偏好（若合法）
   const saved = readPreference();
   if (saved) {
