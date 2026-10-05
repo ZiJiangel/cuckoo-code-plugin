@@ -12,10 +12,13 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { ThemeRuntime } from '../../plugins/runtime/theme-runtime.js';
 import type { ThemeSnapshot, ThemeDefinition, ThemeTokenOverrides } from '../../plugins/runtime/theme-runtime.js';
 import { getUserHome } from '../../infra/portable-data.js';
 import * as windowState from '../window.js';
+
+const require = createRequire(import.meta.url);
 
 let runtime: ThemeRuntime | null = null;
 
@@ -78,8 +81,21 @@ function subscribe(webContents: any): () => void {
   return () => { subscribers.delete(webContents); };
 }
 
+/** 同步原生主题（AI 网页按 prefers-color-scheme 跟随；不注入网页）*/
+function syncNativeTheme(snap: ThemeSnapshot): void {
+  try {
+    const electron = require('electron');
+    const nativeTheme = electron && electron.nativeTheme;
+    if (!nativeTheme) return;
+    // 偏好为 system → 让原生跟随系统；否则用激活主题的 colorScheme
+    if (snap.preference === 'system') nativeTheme.themeSource = 'system';
+    else nativeTheme.themeSource = snap.active && snap.active.colorScheme === 'dark' ? 'dark' : 'light';
+  } catch (_) { /* ignore */ }
+}
+
 /** 变化时推送快照给所有订阅者 + 所有窗口 */
 function broadcastSnapshot(snap: ThemeSnapshot): void {
+  syncNativeTheme(snap);
   // 订阅者（显式订阅的 webContents）
   for (const wc of subscribers) {
     try { wc.send('theme-changed', snap); } catch (_) { /* ignore */ }

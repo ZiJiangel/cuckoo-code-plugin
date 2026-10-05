@@ -39,6 +39,12 @@ const harnessAPI = {
   setBusy: (busy: boolean) => ipcRenderer.send('harness-set-busy', { busy: !!busy }),
   /** 页面就绪通知（可选，用于同步初始状态） */
   ready: () => ipcRenderer.send('harness-ready'),
+  // ========== 主题（跟随 Cuckoo 主题系统）==========
+  themeGet: () => ipcRenderer.invoke('theme-get'),
+  themeSubscribe: () => ipcRenderer.invoke('theme-subscribe'),
+  onThemeChanged: (cb: (snapshot: any) => void) => {
+    ipcRenderer.on('theme-changed', (_e: any, snap: any) => cb(snap));
+  },
 };
 
 try {
